@@ -1,0 +1,151 @@
+'\" t
+.\"     Title: upscli_str_add_unique_token
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "UPSCLI_STR_ADD_UNIQU" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+upscli_str_add_unique_token \- Add a unique token into a string buffer, with optional callbacks as needed by implementation
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <upsclient\&.h>
+
+        int     upscli_str_add_unique_token(char *tgt, size_t tgtsize, const char *token,
+                                int (*callback_always)(char *, size_t, const char *),
+                                int (*callback_unique)(char *, size_t, const char *) );
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBupscli_str_add_unique_token\fR() function takes the pointer \fItgt\fR to a caller\-provided char * buffer of size \fItgtsize\fR, and the pointer \fItoken\fR to a contiguous token that should be added to the end of \fItgt\fR buffer, if it is not there yet\&.
+.sp
+The \fItoken\fR contents are stripped of surrounding space characters, and the method recurses to independently process each space\-separated token inside (if there are any spaces left)\&.
+.sp
+The resulting \fItgt\fR buffer would eventually collect a string comprised of unique \fItoken\fR values in order of first mention, separated by single space characters (ASCII \fI0x20\fR)\&.
+.sp
+Optionally calls \fIcallback_always\fR (if not NULL) after checking the input for spaces (and maybe recursing) and before checking if the token is already there, and/or \fIcallback_unique\fR (if not NULL) after checking for uniqueness and just before going to add a newly seen token\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+If such callback returns
+\fI0\fR, abort the addition of
+\fItoken\fR
+and return
+\fI\-3\fR\&.
+.RE
+.sp
+It is up to the caller to dynamically or statically allocate the \fItgt\fR buffer and \fBfree\fR() it if needed\&. As far as this method is concerned, the buffer may be recycled (in data processing loops) by setting the initial character to \*(Aq\e0\*(Aq, making it an empty string again\&.
+.SH "RETURN VALUE"
+.sp
+The \fBupscli_str_add_unique_token\fR() function returns a numeric code:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI0\fR
+if the
+\fItoken\fR
+value was already there in
+\fItgt\fR
+buffer;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI1\fR
+if
+\fItoken\fR
+was added successfully;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI\-1\fR
+if we needed to add the
+\fItoken\fR, but it did not fit under the
+\fItgtsize\fR
+limit;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI\-2\fR
+if either
+\fItoken\fR
+or
+\fItgt\fR
+string was
+NULL, or if
+\fItoken\fR
+was empty;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI\-3\fR
+if the
+\fItoken\fR
+was rejected by the optional callback method returning
+\fI0\fR\&.
+.RE
+.SH "SEE ALSO"
+.sp
+\fBupscli_str_contains_token\fR(3)

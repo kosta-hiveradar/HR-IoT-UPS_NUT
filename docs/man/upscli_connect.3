@@ -1,0 +1,78 @@
+'\" t
+.\"     Title: upscli_connect
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "UPSCLI_CONNECT" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+upscli_connect, upscli_tryconnect \- Open a connection to a NUT upsd data server
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <upsclient\&.h>
+
+        /* Open a connection to a NUT upsd data server (blocking by default) */
+        int upscli_connect(UPSCONN_t *ups, const char *host, uint16_t port, int flags);
+
+        /* Open a connection to a NUT upsd data server with specified timeout */
+        int upscli_tryconnect(UPSCONN_t *ups, const char *host, uint16_t port, int flags,
+                struct timeval * timeout);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBupscli_connect()\fR function takes the pointer \fIups\fR to a UPSCONN_t state structure and opens a TCP connection to the \fIhost\fR on the given \fIport\fR\&.
+.sp
+By default this makes a blocking connection attempt (until the system transport layer times out the underlying \fBselect\fR(2) call)\&. A program\-wide default timeout for this method can be configured with the \fBupscli_set_default_connect_timeout\fR(3) or \fBupscli_init_default_connect_timeout\fR(3) methods\&. For operations with explicit operation\-specific timeout please use the \fBupscli_tryconnect()\fR method instead\&.
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+As part of general initialization, both the \fBupscli_init\fR(3) function or the first call to \fBupscli_connect()\fR function, can call the \fBupscli_init_default_connect_timeout\fR(3) method (if it was never used before): this allows unmodified (legacy) NUT clients to consistently benefit from presence of the NUT_DEFAULT_CONNECT_TIMEOUT environment variable for \fBupscli_connect\fR(3) attempts to be not blocking (as per default)\&.
+.sp .5v
+.RE
+.sp
+\fIflags\fR may be either UPSCLI_CONN_TRYSSL to try a SSL connection, or UPSCLI_CONN_REQSSL to require a SSL connection\&.
+.sp
+Introduced in version 2\&.7, an additional flag UPSCLI_CONN_CERTVERIF now exists to verify the signature offered during the SSL handshake\&. This flag should be used in conjunction with \fBupscli_init\fR(3) and/or \fBupscli_add_host_cert\fR(3) calls before connecting in order to define a CA certificate with which to verify\&.
+.sp
+If SSL mode is required, this function will only return successfully if it is able to establish a SSL connection with the server\&. Possible reasons for failure include no SSL support on the server, and if \fBupsclient\fR itself hasn\(cqt been compiled with SSL support\&.
+.sp
+You must call \fBupscli_disconnect\fR(3) when finished with a connection, or your program will slowly leak memory and file descriptors\&.
+.SH "RETURN VALUE"
+.sp
+The \fBupscli_connect()\fR function modifies the UPSCONN_t structure and returns \fI0\fR on success, or \fI\-1\fR if an error occurs\&.
+.SH "SEE ALSO"
+.sp
+\fBupscli_disconnect\fR(3), \fBupscli_fd\fR(3), \fBupscli_init\fR(3), \fBupscli_splitaddr\fR(3), \fBupscli_splitname\fR(3), \fBupscli_ssl\fR(3), \fBupscli_strerror\fR(3), \fBupscli_get_default_connect_timeout\fR(3), \fBupscli_set_default_connect_timeout\fR(3), \fBupscli_init_default_connect_timeout\fR(3), \fBupscli_upserror\fR(3)

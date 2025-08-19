@@ -1,0 +1,83 @@
+'\" t
+.\"     Title: upscli_str_contains_token
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "UPSCLI_STR_CONTAINS_" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+upscli_str_contains_token \- Verify that an unique token is present in the string
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <upsclient\&.h>
+
+        int     upscli_str_contains_token(const char *string, const char *token);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBupscli_str_contains_token\fR() function takes the pointer \fItgt\fR to a caller\-provided const char * buffer, comprised of unique tokens separated by single space characters (ASCII \fI0x20\fR), and the pointer \fItoken\fR to a presumed\-contiguous token value that should be found in the \fItgt\fR buffer\&.
+.SH "RETURN VALUE"
+.sp
+The \fBupscli_str_contains_token\fR() function returns a numeric code:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fInon\-zero\fR
+if the
+\fItoken\fR
+value was found in
+\fItgt\fR
+buffer (possibly surrounded by space characters, or being at start/end of the string);
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI0\fR
+if
+\fItoken\fR
+was not found, or if either
+\fItoken\fR
+or
+\fItgt\fR
+string was
+NULL
+or empty\&.
+.RE
+.SH "SEE ALSO"
+.sp
+\fBupscli_str_add_unique_token\fR(3)

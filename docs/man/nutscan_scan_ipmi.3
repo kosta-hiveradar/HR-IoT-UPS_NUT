@@ -1,0 +1,67 @@
+'\" t
+.\"     Title: nutscan_scan_ipmi
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "NUTSCAN_SCAN_IPMI" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+nutscan_scan_ipmi \- Scan local IPMI devices\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <nut\-scan\&.h>
+
+        nutscan_device_t * nutscan_scan_ipmi(
+                const char * startIP,
+                const char * stopIP,
+                nutscan_ipmi_t * sec);
+
+        nutscan_device_t * nutscan_scan_ip_range_ipmi(
+                nutscan_ip_range_list_t * irl,
+                nutscan_ipmi_t * sec);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBnutscan_scan_ipmi()\fR and \fBnutscan_scan_ip_range_ipmi()\fR functions try to detect IPMI manageable devices\&.
+.sp
+If \fIstart_ip\fR for the former or \fIirl\fR for the latter are NULL, the respective function searches for a local PSU\&.
+.sp
+Otherwise, it searches for remote hosts that would serve IPMI protocols, and would try to authenticate using the data in \fIsec\fR structure\&.
+.sp
+The former issues an IPMI request on every IP ranging from \fIstartIP\fR to \fIstopIP\fR, where \fIstartIP\fR is mandatory and \fIstopIP\fR is optional (one \fIstartIP\fR address is scanned if \fIstopIP\fR is NULL); while the latter can walk several IP address ranges represented by a nutscan_ip_range_list_t structure\&.
+.sp
+Those IP arguments may be either IPv4 or IPv6 addresses or host names\&.
+.sp
+You MUST call \fBnutscan_init\fR(3) before using this function\&.
+.SH "BUGS"
+.sp
+Design or implementation of this function may be incomplete: until recently, this man page stated that it was not implemented yet\&. Source code is present, although some blocks are commented away or hidden with #if 0\&.
+.SH "RETURN VALUE"
+.sp
+The \fBnutscan_scan_ipmi()\fR function is not implemented yet\&.
+.SH "SEE ALSO"
+.sp
+\fBnutscan_init\fR(3), \fBnutscan_scan_usb\fR(3), \fBnutscan_scan_xml_http_range\fR(3), \fBnutscan_scan_nut\fR(3), \fBnutscan_scan_avahi\fR(3), \fBnutscan_scan_snmp\fR(3), \fBnutscan_display_sanity_check\fR(3), \fBnutscan_display_sanity_check_serial\fR(3), \fBnutscan_display_ups_conf_with_sanity_check\fR(3), \fBnutscan_display_ups_conf\fR(3), \fBnutscan_display_parsable\fR(3), \fBnutscan_new_device\fR(3), \fBnutscan_free_device\fR(3), \fBnutscan_add_option_to_device\fR(3), \fBnutscan_init_ip_ranges\fR(3), \fBnutscan_free_ip_ranges\fR(3), \fBnutscan_add_ip_range\fR(3), \fBnutscan_cidr_to_ip\fR(3)

@@ -1,0 +1,117 @@
+'\" t
+.\"     Title: liebert-gxe
+.\"    Author: [see the "AUTHORS" section]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "LIEBERT\-GXE" "8" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+liebert-gxe \- Driver for Liebert GXE series UPS, using the YDN23 serial protocol
+.SH "SYNOPSIS"
+.sp
+\fBliebert\-gxe\fR \-h
+.sp
+\fBliebert\-gxe\fR \-a \fIUPS_NAME\fR [\fIOPTIONS\fR]
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+This man page only documents the hardware\-specific features of the liebert\-gxe driver\&. For information about the core driver, see \fBnutupsdrv\fR(8)\&.
+.sp .5v
+.RE
+.SH "SUPPORTED HARDWARE"
+.sp
+Tested to work on the following units:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Liebert GXE 01k00TS1101C00
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+This UPS has an RS\-232 port and a USB port\&. The USB port has an ACM interface which functions as a serial port for the host operating system\&. Both ports can be used managing the device\&.
+.sp .5v
+.RE
+.RE
+.sp
+This is an experimental driver\&. You have been warned\&.
+.SH "EXTRA ARGUMENTS"
+.sp
+This driver supports the following optional settings in \fBups.conf\fR(5):
+.PP
+\fBaddr=\fR\fInum\fR
+.RS 4
+Set the address of the UPS \(em 01 (default) ~ 99\&.
+.RE
+.PP
+\fBretry=\fR\fInum\fR
+.RS 4
+Set the max times of read failures\&. (UPS sometimes ignores the incoming command and causes driver stales\&. The driver will ignore
+\fBretry\fR
+failures if occurred in a row\&. However, this does increase the latency if a real stale happened\&. Default to 3)
+.RE
+.SH "AUTHORS"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Gong Zhile <goodspeed at mailo\&.cat>
+.RE
+.SH "SEE ALSO"
+.SS "The core driver:"
+.sp
+\fBnutupsdrv\fR(8)
+.SS "Internet resources:"
+.sp
+The NUT (Network UPS Tools) home page: https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/

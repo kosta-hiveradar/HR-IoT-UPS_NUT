@@ -1,0 +1,124 @@
+'\" t
+.\"     Title: upscli_init_default_connect_timeout
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "UPSCLI_INIT_DEFAULT_" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+upscli_init_default_connect_timeout \- Initialize upsclient module aspect of default timeout for initial connections\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <upsclient\&.h>
+
+        int upscli_init_default_connect_timeout(
+                const char *cli_secs,
+                const char *config_secs,
+                const char *default_secs);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBupscli_init_default_connect_timeout()\fR function initializes upsclient module aspect of default connection timeout for \fBupscli_connect\fR(3), which may be important when e\&.g\&. \fBupsc\fR(8) scripting or \fBupsmon\fR(8) configuration refers to unresponsive hosts, or when the host name resolution lags, etc\&. By default, \fBupscli_connect\fR(3) blocks indefinitely in its attempts to connect (or until the system transport layer interrupts such an attempt)\&.
+.sp
+It populates the value from different sources, mostly C strings which represent a floating\-point non\-negative number (invalid parsing is logged and may impact the return value), any or all of them may be NULL to skip, and in specific order (last valid hit wins):
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+built\-in
+\fI0\fR
+meaning indefinitely blocking (NUT default for this method over at least 20 years);
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the number from
+default_secs
+as a particular NUT or third\-party client program\(cqs built\-in preferred (low\-priority) default;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the number from
+NUT_DEFAULT_CONNECT_TIMEOUT
+environment variable as a site\-local preference (generally pre\-set in
+\fBnut.conf\fR(5));
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the number from
+config_secs
+as a particular NUT or third\-party client program\(cqs configuration file default;
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the number from
+cli_secs
+as a particular NUT or third\-party client program\(cqs setting from command line (highest priority)\&.
+.RE
+.sp
+Internally, calls \fBupscli_set_default_connect_timeout\fR(3) for most of the string related processing\&.
+.sp
+The upsclient module tracks if \fBupscli_init_default_connect_timeout()\fR function was called and succeeded, in order to call it once (if never used) from the \fBupscli_connect\fR(3) or \fBupscli_init\fR(3) methods\&. This allows unmodified (legacy) NUT clients to consistently benefit from presence of the NUT_DEFAULT_CONNECT_TIMEOUT environment variable\&.
+.sp
+This tracking does not preclude programs from explicitly calling the method any amount of times\&.
+.SH "RETURN VALUE"
+.sp
+The \fBupscli_init_default_connect_timeout()\fR function returns \fI0\fR on success (either if all strings were NULL so the built\-in default is applied, or at least one of those strings that were set was valid and its value got applied), or \fI\-1\fR if an error occurs (at least one string was not NULL, and none of the strings was valid)\&.
+.SH "SEE ALSO"
+.sp
+\fBupscli_connect\fR(3), \fBupscli_tryconnect\fR(3), \fBupscli_set_default_connect_timeout\fR(3), \fBupscli_get_default_connect_timeout\fR(3), \fBupscli_init\fR(3)

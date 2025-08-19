@@ -1,0 +1,176 @@
+'\" t
+.\"     Title: powervar_cx_ser
+.\"    Author: [see the "AUTHORS" section]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "POWERVAR_CX_SER" "8" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+powervar_cx_ser \- Driver for Powervar UPM Series UPS equipment with Serial connection
+.SH "SYNOPSIS"
+.sp
+\fBpowervar_cx_ser\fR \-h
+.sp
+\fBpowervar_cx_ser\fR \-a \fIUPS_NAME\fR [\fIOPTIONS\fR]
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+This man page only documents the hardware\-specific features of the Powervar driver\&. For information about the core driver, see \fBnutupsdrv\fR(8)\&.
+.sp .5v
+.RE
+.SH "SUPPORTED HARDWARE"
+.sp
+This driver supports the Powervar UPM UPS family (devices with serial port connection)\&. For USB connected UPM Series devices, see also \fBpowervar_cx_usb\fR(8)\&.
+.SH "EXTRA ARGUMENTS"
+.sp
+This driver supports the following optional settings in the \fBups.conf\fR(5) file:
+.PP
+\fBstartdelay\fR=\fInum\fR
+.RS 4
+Change startup delay time from 1 second default\&.
+.RE
+.PP
+\fBoffdelay\fR=\fInum\fR
+.RS 4
+Change shutdown delay time from 0 second default\&.
+.RE
+.PP
+\fBdisptesttime\fR=\fInum\fR
+.RS 4
+Change display test time from the 10 second default\&.
+.RE
+.SH "INSTANT COMMANDS"
+.sp
+This driver supports the following Instant Commands (see \fBupscmd\fR(8)):
+.SS "All GTS and UPM UPS units"
+.PP
+\fBbeeper\&.disable\fR
+.RS 4
+Disable the UPS beeper\&.
+.RE
+.PP
+\fBbeeper\&.enable\fR
+.RS 4
+Enable the UPS beeper\&.
+.RE
+.PP
+\fBbeeper\&.mute\fR
+.RS 4
+Temporarily mute the UPS beeper\&.
+.RE
+.PP
+\fBshutdown\&.return\fR
+.RS 4
+Turn off the load possibly after a delay and return when power is back\&.
+.RE
+.PP
+\fBshutdown\&.stop\fR
+.RS 4
+Stop a shutdown in progress\&.
+.RE
+.PP
+\fBshutdown\&.reboot\fR
+.RS 4
+Shut down the load briefly while rebooting the UPS\&.
+.RE
+.PP
+\fBshutdown\&.stayoff\fR
+.RS 4
+Turn off the load and remain off\&.
+.RE
+.PP
+\fBtest\&.battery\&.start\&.deep\fR
+.RS 4
+Start a "deep" battery test\&. This test runs the UPS until the low battery point and then returns to the AC line\&.
+.RE
+.PP
+\fBtest\&.battery\&.start\&.quick\fR
+.RS 4
+Start a "quick" battery test\&. The default time is 2 minutes\&. This time can be set in the
+\fBups\&.conf\fR
+file\&. See
+\fBtestime\fR
+above\&.
+.RE
+.PP
+\fBtest\&.battery\&.stop\fR
+.RS 4
+Stops a battery test that is in progress\&.
+.RE
+.PP
+\fBtest\&.failure\&.start\fR
+.RS 4
+Starts a simulation of an input power failure\&.
+.RE
+.PP
+\fBtest\&.failure\&.stop\fR
+.RS 4
+Stops a simulation of an input power failure\&.
+.RE
+.SS "All UPM UPS units"
+.PP
+\fBtest\&.panel\&.start\fR
+.RS 4
+Start testing the UPS panel\&.
+.RE
+.PP
+\fBreset\&.input\&.minmax\fR
+.RS 4
+Reset minimum and maximum input voltage status\&.
+.RE
+.SH "WRITABLE VARIABLES"
+.sp
+See \fBupsrw\fR(8) to see what variables are writable for the UPS\&.
+.SH "AUTHORS"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Bill Elliot <bill@wreassoc\&.com>
+.RE
+.SH "SEE ALSO"
+.sp
+For USB connected GTS and UPM Series devices, see \fBpowervar_cx_usb\fR(8)\&.
+.SS "The core driver:"
+.sp
+\fBnutupsdrv\fR(8)
+.SS "Internet resources:"
+.sp
+The NUT (Network UPS Tools) home page: https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/

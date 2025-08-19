@@ -1,0 +1,7 @@
+[admin]
+    password = meowmeow
+    actions = SET FSD
+    instcmds = ALL
+
+[dashboard]
+    password = meowmeow

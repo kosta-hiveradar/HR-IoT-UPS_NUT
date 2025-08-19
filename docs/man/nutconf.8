@@ -1,0 +1,1272 @@
+'\" t
+.\"     Title: nutconf
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "NUTCONF" "8" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+nutconf \- NUT configuration tool
+.SH "SYNOPSIS"
+.sp
+\fBnutconf\fR \-\-help
+.sp
+\fBnutconf\fR [\fIOPTIONS\fR]
+.SH "DESCRIPTION"
+.sp
+\fBnutconf\fR tool is used to create and manipulate NUT configuration files\&. It also supports device scanning (to suggest configuration of devices)\&.
+.SH "INSTALLATION"
+.sp
+The scanning feature depends on the very same compile time and run time dependencies as the \fBnut\-scanner\fR\&.
+.SH "OPTIONS"
+.PP
+\fB\-h\fR | \fB\-help\fR | \fB\-\-help\fR
+.RS 4
+Display the help text\&.
+.RE
+.PP
+\fB\-v\fR | \fB\-\-verbose\fR
+.RS 4
+Increase output verbosity (may be used multiple times)\&.
+.RE
+.PP
+\fB\-\-is\-configured\fR
+.RS 4
+Checks whether NUT was configured, before\&.
+.RE
+.PP
+\fB\-\-system\fR
+.RS 4
+System configuration directory shall be used\&.
+.RE
+.PP
+\fB\-\-local\fR \fIdirectory\fR
+.RS 4
+Sets alternative configuration directory\&.
+.RE
+.PP
+\fB\-\-get\-mode\fR
+.RS 4
+Prints current NUT configuration mode
+.RE
+.PP
+\fB\-\-set\-mode\fR \fImode\fR
+.RS 4
+Sets NUT configuration mode\&.
+.sp
+Known modes are:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+standalone
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+netserver
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+netclient
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+controlled
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+manual
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+none
+.RE
+.RE
+.SH "CONFIGURATION ENTRY SET/ADD OPTIONS"
+.sp
+These options mostly have 2 forms: \fI\-\-set\-\&...\fR or \fI\-\-add\-\&...\fR\&.
+.sp
+The difference is that the set options discard previous settings while the add options keep them\&.
+.sp
+Note that such options may be specified multiple times for one run (to enable setting multiple entries at once)\&.
+.PP
+\fB\-\-set\-monitor\fR | \fB\-\-add\-monitor\fR \fI<arguments>\fR
+.RS 4
+Sets/adds a NUT monitor\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Arguments:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\*(Aq<ups_ID>\*(Aq \*(Aq<host>[:<port>]\*(Aq \*(Aq<power_value>\*(Aq \*(Aq<user>\*(Aq \*(Aq<passwd>\*(Aq \*(Aq(\e"master\e"|\e"slave\e")\*(Aq
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.RE
+.PP
+\fB\-\-set\-listen\fR | \fB\-\-add\-listen\fR \fI<address>\fR \fI[<port>]\fR
+.RS 4
+Sets/adds
+\fBupsd\fR(8)
+daemon listen address\&.
+.RE
+.PP
+\fB\-\-set\-device\fR | \fB\-\-add\-device\fR \fI<arguments>\fR
+.RS 4
+Sets/adds a device (typically a UPS)\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Arguments:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\*(Aq<ups_ID>\*(Aq \*(Aq<driver>\*(Aq \*(Aq<port>\*(Aq \*(Aq[<attribute>=<value>]*\*(Aq
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+The attribute/value pairs follow device configuration syntax\&. Devices may have very different configuration attributes depending on the driver\&. Exhaustive description of them is beyond this man page and may be found in NUT documentation\&.
+.RE
+.RE
+.PP
+\fB\-\-set\-notifyflags\fR | \fB\-\-add\-notifyflags\fR \fI<type>\fR \fI<flag>+\fR
+.RS 4
+Sets/adds notification flags for the notification type\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Notification types are:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIONLINE\fR
+(mains is present)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIONBATT\fR
+(mains is gone)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fILOWBATT\fR
+(remaining battery capacity is low)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIFSD\fR
+(shutdown was forced)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fICOMMOK\fR
+(communication with device established)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fICOMMBAD\fR
+(lost communication with device)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fISHUTDOWN\fR
+(system is going down, now)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIREPLBATT\fR
+(UPS battery needs replacing)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOCOMM\fR
+(device is unavailable)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOPARENT\fR
+(upsmon parent process died, shutdown is impossible)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fICAL\fR
+(calibration in progress)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTCAL\fR
+(calibration finished)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIOFF\fR
+(UPS is administratively OFF or asleep, should wake up on command)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTOFF\fR
+(UPS is no longer administratively OFF or asleep)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIBYPASS\fR
+(on bypass = powered, not protecting)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTBYPASS\fR
+(no longer on bypass)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIALARM\fR
+(UPS is in an alarm state (has active alarms))
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTALARM\fR
+(UPS is no longer in an alarm state (no active alarms))
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIOVER\fR
+(overloaded)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTOVER\fR
+(no longer overloaded)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fITRIM\fR
+(trimming incoming voltage)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTTRIM\fR
+(no longer trimming incoming voltage)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIBOOST\fR
+(boosting incoming voltage)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTBOOST\fR
+(no longer boosting incoming voltage)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIOTHER\fR
+(UPS has at least one unclassified status token)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fINOTOTHER\fR
+(UPS has no unclassified status tokens anymore)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fISUSPEND_STARTING\fR
+(OS is entering sleep/suspend/hibernate mode)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fISUSPEND_FINISHED\fR
+(OS just finished sleep/suspend/hibernate mode)
+.RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Notification flags:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fISYSLOG\fR
+(use syslogd to log the notification)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIWALL\fR
+(push a message to users\*(Aq terminals)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIEXEC\fR
+(execute a command)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIIGNORE\fR
+(don\(cqt act)
+.RE
+.RE
+.RE
+.PP
+\fB\-\-set\-notifymsg\fR \fI<type>\fR \fI<message>\fR
+.RS 4
+Sets message for the specified notification type\&.
+.RE
+.PP
+\fB\-\-set\-shutdowncmd\fR \fI<command>\fR
+.RS 4
+Sets command used to shut the system down\&.
+.RE
+.PP
+\fB\-\-set\-user\fR | \fB\-\-add\-user\fR \fI<arguments>\fR
+.RS 4
+Sets/adds NUT user\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Arguments:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fI<username>\fR
+(specifies user name)\&. For
+\fIupsmon\fR
+user, it has a special form of
+upsmon=(primary|master|secondary|slave)
+which specifies the monitoring mode\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpassword=<passwd>\fR
+sets password for the user
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIactions=<actions>\fR
+sets actions (\fISET\fR,
+\fIFSD\fR
+are supported)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIinstcmds=<command>\fR
+sets instant commands allowed for the user (may be used multiple times)
+.RE
+.RE
+.RE
+.SH "SCANNING OPTIONS"
+.sp
+Availability of each scanning option depends on availability of various 3rd\-party libraries both at compile time and run time\&.
+.sp
+Run the tool with the \fB\-\-help\fR option to check which of the \fB\-\-scan\-\&...\fR options are actually supported\&.
+.sp
+All timeouts are in microseconds\&.
+.PP
+\fB\-\-scan\-snmp\fR \fI<start IP>\fR \fI<stop IP>\fR \fI[<attribute>=<value>]*\fR
+.RS 4
+Scans for SNMP devices on IP addresses from the specified range\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Known attributes are:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fItimeout\fR
+device scan timeout
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIcommunity\fR
+SNMP community (default:
+\fBpublic\fR)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIsec\-level\fR
+security level (SNMPv3); one of
+\fBnoAuthNoPriv\fR
+\fBauthNoPriv\fR,
+\fBauthPriv\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIsec\-name\fR
+security name (SNMPv3); mandatory companion of
+\fBsec\-level\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIauth\-password\fR
+authentication password (SNMPv3); mandatory for
+\fBauthNoPriv\fR
+and
+\fBauthPriv\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpriv\-password\fR
+privacy password (SNMPv3); mandatory for
+\fBauthPriv\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIauth\-protocol\fR
+authentication protocol (SNMPv3):
+\fBMD5\fR
+or
+\fBSHA\fR,
+\fBMD5\fR
+is the default
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpriv\-protocol\fR
+priv\&. protocol (SNMPv3):
+\fBDES\fR
+or
+\fBAES\fR,
+\fBDES\fR
+is the default
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpeer\-name\fR
+peer name
+.RE
+.RE
+.RE
+.PP
+\fB\-\-scan\-usb\fR
+.RS 4
+Scans the USB bus for known devices
+.RE
+.PP
+\fB\-\-scan\-xml\-http\fR \fI[<timeout>]\fR
+.RS 4
+Scans for XML/HTTP devices on the network\&.
+.RE
+.PP
+\fB\-\-scan\-nut\fR \fI<start IP>\fR \fI<stop IP>\fR \fI<port>\fR \fI[<timeout>]\fR
+.RS 4
+Scans for NUT (pseudo\-)devices on the network\&.
+.RE
+.PP
+\fB\-\-scan\-avahi\fR \fI[<timeout>]\fR
+.RS 4
+Scans for Avahi devices\&.
+.RE
+.PP
+\fB\-\-scan\-ipmi\fR \fI<start IP>\fR \fI<stop IP>\fR \fI[<attribute>=<value>]\fR*
+.RS 4
+Scans for IPMI devices on IP addresses from the specified range\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Known attributes are:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIusername\fR
+username (mandatory for IPMI/LAN)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpassword\fR
+user password (mandatory for IPMI/LAN)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIauth\-type\fR
+authentication type (see below)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIcipher\-suite\-id\fR
+cipher suite ID (see below)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIK\-g\-BMC\-key\fR
+optional second key (???)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIpriv\-level\fR
+priv\&. level
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIworkaround\-flags\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIversion\fR
+(1\&.5 or 2\&.0)
+.RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Authentication types:
+.sp
+Specifies the IPMI 1\&.5 authentication type to use (NONE, STRAIGHT_PASSWORD_KEY, MD2, and MD5) with the remote host (default=MD5)\&. This forces connection through the
+\fIlan\fR
+IPMI interface, thus in IPMI 1\&.5 mode\&.
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fInone\fR
+(authentication is disabled)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIMD2\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIMD5\fR
+(default)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIplain\-password\fR
+(no ciphering used for password sending)
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIOEM\fR
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fIRMCPplus\fR
+.RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Cipher suite IDs:
+.sp
+Specifies the IPMI 2\&.0 cipher suite ID to use\&.
+.sp
+The Cipher Suite ID identifies a set of authentication, integrity, and confidentiality algorithms to use for IPMI 2\&.0 communication\&.
+.sp
+The authentication algorithm identifies the algorithm to use for session setup, the integrity algorithm identifies the algorithm to use for session packet signatures, and the confidentiality algorithm identifies the algorithm to use for payload encryption (default=3)\&.
+.sp
+The following cipher suite IDs are currently supported:
+.TS
+allbox tab(:);
+ltB ltB ltB ltB.
+T{
+Code
+T}:T{
+Authentication
+T}:T{
+Integrity
+T}:T{
+Confidentiality
+T}
+.T&
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt
+lt lt lt lt.
+T{
+\fI0\fR
+T}:T{
+None
+T}:T{
+None
+T}:T{
+None
+T}
+T{
+\fI1\fR
+T}:T{
+HMAC\-SHA1
+T}:T{
+None
+T}:T{
+None
+T}
+T{
+\fI2\fR
+T}:T{
+HMAC\-SHA1
+T}:T{
+HMAC\-SHA1\-96
+T}:T{
+None
+T}
+T{
+\fI3\fR
+T}:T{
+HMAC\-SHA1
+T}:T{
+HMAC\-SHA1\-96
+T}:T{
+AES\-CBC\-128
+T}
+T{
+\fI6\fR
+T}:T{
+HMAC\-MD5
+T}:T{
+None
+T}:T{
+None
+T}
+T{
+\fI7\fR
+T}:T{
+HMAC\-MD5
+T}:T{
+HMAC\-MD5\-128
+T}:T{
+None
+T}
+T{
+\fI8\fR
+T}:T{
+HMAC\-MD5
+T}:T{
+HMAC\-MD5\-128
+T}:T{
+AES\-CBC\-128
+T}
+T{
+\fI11\fR
+T}:T{
+HMAC\-MD5
+T}:T{
+MD5\-128
+T}:T{
+None
+T}
+T{
+\fI12\fR
+T}:T{
+HMAC\-MD5
+T}:T{
+MD5\-128
+T}:T{
+AES\-CBC\-128
+T}
+T{
+\fI15\fR
+T}:T{
+HMAC\-SHA256
+T}:T{
+None
+T}:T{
+None
+T}
+T{
+\fI16\fR
+T}:T{
+HMAC\-SHA256
+T}:T{
+HMAC_SHA256_128
+T}:T{
+None
+T}
+T{
+\fI17\fR
+T}:T{
+HMAC\-SHA256
+T}:T{
+HMAC_SHA256_128
+T}:T{
+AES\-CBC\-128
+T}
+.TE
+.sp 1
+.RE
+.RE
+.PP
+\fB\-\-scan\-serial\fR \fI<port>\fR*
+.RS 4
+Scans for serial devices (of supported types) on the specified serial port(s)\&.
+.RE
+.SH "EXAMPLES"
+.sp
+To set alternative directory for configuration files:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+:; nutconf \-\-local ~/test/nut/etc
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+To add another user (keeping the existing ones):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+:; nutconf \-\-add\-user bart password=qwerty
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+To scan USB devices and serial devices (on the first two ports):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+:; nutconf \-\-scan\-usb \-\-scan\-serial /dev/ttyS1 /dev/ttyS2
+.fi
+.if n \{\
+.RE
+.\}
+.SH "SEE ALSO"
+.sp
+\fBups.conf\fR(5) \fBnut-scanner\fR(8)
+.SH "INTERNET RESOURCES"
+.sp
+The NUT (Network UPS Tools) home page: http://www\&.networkupstools\&.org/

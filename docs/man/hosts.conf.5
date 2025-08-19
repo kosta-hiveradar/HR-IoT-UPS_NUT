@@ -1,0 +1,92 @@
+'\" t
+.\"     Title: hosts.conf
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "HOSTS\&.CONF" "5" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+hosts.conf \- Access control for Network UPS Tools CGI programs
+.SH "DESCRIPTION"
+.sp
+The CGI programs (\fBupsset.cgi\fR(8), \fBupsstats.cgi\fR(8), \fBupsimage.cgi\fR(8)) use this file to determine if they are allowed to talk to a host\&. This keeps random visitors from using your web server to annoy others by creating outgoing connections\&.
+.SH "IMPORTANT NOTES"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Contents of this file should be pure ASCII (character codes not in range would be ignored with a warning message)\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+This file does not contain passwords\&. Read\-only monitoring in NUT is anonymous, and the
+\fBupsset\fR(8)
+program asks for credentials in the browser session when commanding a particular UPS (web\-server should be secured, as reported to the program by
+\fBupsset.conf\fR(5)
+file)\&.
+.RE
+.SH "DIRECTIVES"
+.PP
+\fBMONITOR\fR \fIups\fR \fIdescription\fR
+.RS 4
+The
+\fIups\fR
+element is in the form
+upsname[@hostname[:port]]\&.
+.sp
+To allow connections to an UPS called "snoopy" on a system called "doghouse" that runs
+upsd
+on port 7877, it would look like this:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+MONITOR snoopy@doghouse:7877 "Joe Cool"
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+The description must be one element, so if it has spaces, then it must be wrapped with quotes as shown above\&. The default hostname is "localhost"\&.
+.RE
+.SH "SEE ALSO"
+.sp
+\fBupsset.cgi\fR(8), \fBupsstats.cgi\fR(8), \fBupsimage.cgi\fR(8)
+.SS "Internet resources:"
+.sp
+The NUT (Network UPS Tools) home page: https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/

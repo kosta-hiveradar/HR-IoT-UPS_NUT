@@ -1,0 +1,289 @@
+'\" t
+.\"     Title: hwmon_ina219
+.\"    Author: [see the "AUTHORS" section]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "HWMON_INA219" "8" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+hwmon_ina219 \- Driver for UPS based on INA219
+.SH "SYNOPSIS"
+.sp
+\fBhwmon_ina219\fR \-h
+.sp
+\fBhwmon_ina219\fR \-a \fIUPS_NAME\fR [\fIOPTIONS\fR]
+.if n \{\
+.sp
+.\}
+.RS 4
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNote\fR
+.ps -1
+.br
+.sp
+This man page only documents the specific features of the \fBhwmon_ina219\fR driver\&. For information about the core driver, see \fBnutupsdrv\fR(8)\&.
+.sp .5v
+.RE
+.sp
+The driver implements reading of current and voltage from INA219 by using hwmon sysfs API of the Linux Kernel\&. There is no other UPS\-like logic in there\&. Based on the measurements of the battery voltage and charging current, the driver makes assumptions of the current state of the system\&.
+.SH "SUPPORTED HARDWARE"
+.sp
+The \fBhwmon_ina219\fR driver is based on setup with Raspberry PI Compute Module 4 and its baseboard Waveshare CM4\-POE\-UPS\-BASE\&.
+.SH "EXTRA ARGUMENTS"
+.sp
+The required parameter for this driver:
+.PP
+\fBport\fR=\fIhwmon\-dir\fR
+.RS 4
+Path to appropriate /sys/hwmon/hwmonX or
+\fIauto\fR
+to detect automatically\&.
+.RE
+.sp
+Optional parameters:
+.PP
+\fBdefault\&.battery\&.charge\&.low\fR=\fIlow\-battery\-threshold\fR
+.RS 4
+Threshold for low battery state (in percent)\&.
+.RE
+.PP
+\fBdefault\&.battery\&.voltage\&.nominal\fR=\fIvoltage\-value\fR
+.RS 4
+Nominal voltage (V) value of utilized batteries, used to derive their low and high watermark settings (see below)\&. Default: 3\&.6\&.
+.sp
+Known pre\-sets include:
+3\&.6,
+3\&.7,
+3\&.8,
+3\&.85\&.
+.RE
+.PP
+\fBdefault\&.battery\&.voltage\&.low\fR=\fIvoltage\-value\fR
+.RS 4
+Low voltage (V) value of used batteries\&. Practically, it denotes depleted batteries\&. If not given, it is derived from the
+\fBbattery\&.voltage\&.nominal\fR\&.
+.RE
+.PP
+\fBdefault\&.battery\&.voltage\&.high\fR=\fIvoltage\-value\fR
+.RS 4
+High voltage (V) value of used batteries\&. Practically, it denotes fully charged batteries\&. If not given, it is derived from the
+\fBbattery\&.voltage\&.nominal\fR\&.
+.RE
+.SH "INSTALLATION"
+.sp
+This driver is specific to the Linux hwmon API\&.
+.sp
+When using with the Waveshare CM4\-POE\-UPS\-BASE baseboard, there are few steps to be done to enable access to the INA219 circuit:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+edit boot/config\&.txt:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+  dtparam=i2c_vc=on
+  dtoverlay=i2c\-ina219
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+create a new device tree overlay file i2c\-ina219\&.dts:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+/dts\-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&i2c_csi_dsi>;
+        __overlay__ {
+            #address\-cells = \fB(1)\fR;
+            #size\-cells = \fB(2)\fR;
+
+            ina219@43 {
+                status = "okay";
+                compatible = "ti,ina219";
+                reg = <0x43>;
+                shunt\-resistor = \fB(3)\fR;  // R100
+            };
+        };
+    };
+};
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+convert i2c\-ina219\&.dts to dtbo and place it into /boot/overlays:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+$ dtc \-@ \-I dts \-O dtb \-o /boot/overlays/i2c\-ina219\&.dtbo i2c\-ina219\&.dts
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 4.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  4." 4.2
+.\}
+configure hwmon_ina219 UPS driver for NUT (ups\&.conf):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+[ina219]
+driver = hwmon_ina219
+port = auto
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.SH "KNOWN ISSUES AND BUGS"
+.sp
+The driver shutdown function is not implemented\&.
+.SH "AUTHORS"
+.sp
+Andrew Anderson <aander07@gmail\&.com>
+.SH "SEE ALSO"
+.SS "The core driver:"
+.sp
+\fBnutupsdrv\fR(8)
+.SS "Internet resources:"
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Initial pull requests adding this driver:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+https://github\&.com/networkupstools/nut/pull/2430
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+https://github\&.com/networkupstools/nut/issues/2378
+.RE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+Baseboard with INA219:
+https://www\&.waveshare\&.com/wiki/CM4\-POE\-UPS\-BASE
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+TI INA219:
+https://www\&.ti\&.com/lit/ds/symlink/ina219\&.pdf
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The NUT (Network UPS Tools) home page:
+https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/
+.RE

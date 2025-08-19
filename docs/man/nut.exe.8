@@ -1,0 +1,145 @@
+'\" t
+.\"     Title: nut.exe
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "NUT\&.EXE" "8" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+nut.exe \- NUT for Windows wrapper for all\-in\-one service
+.SH "SYNOPSIS"
+.sp
+\fBnut\&.exe\fR {\-h | /?}
+.sp
+\fBnut\&.exe\fR [\fIOPTIONS\fR]
+.sp
+\fBnut\&.exe\fR (as a service implementation)
+.SH "DESCRIPTION"
+.sp
+\fBnut\&.exe\fR wraps NUT programs to start and stop as a Windows service\&.
+.sp
+Depending on \fBnut.conf\fR(5) setting of \fIMODE\fR, it would manage the bundle of driver(s), \fBupsd\fR(8) data server and \fBupsmon\fR(8) client, as well as attempt an UPS shutdown command in case of FSD handling, or for mere \fInetclient\fR systems it would run just the \fBupsmon\fR(8) client to monitor remote UPS device(s) and initiate the OS shut down on the local Windows system as applicable\&.
+.sp
+Beside launching or stopping a set of the NUT programs in certain cases, this helper program also allows to register (or un\-register) itself as a Windows service\&. To actually manage the service from command line you can execute the Windows net command, e\&.g\&.:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+net stop "Network UPS Tools"
+net start "Network UPS Tools"
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+You can also execute nut start to automatically register the service (if not yet registered) and start it, and nut stop to stop the service (if registered and running)\&.
+.sp
+Note that for a Windows machine to act as a NUT data server for further clients, you may have to add Windows Firewall rules to allow incoming connections (by default to port 3493/tcp), e\&.g\&. using PowerShell to elevate (alternately right\-click a "Command Prompt" shortcut and select "Run as administrator"), and execute netsh to actually configure the needed "Advanced Firewall" rule:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+REM Elevate to administrator status then run netsh to add firewall rule\&.
+REM Recommended to adapt "LocalIP" to expected listeners of this server,
+REM and "RemoteIP" to your single or comma\-separated subnet(s) in CIDR
+REM notation, specific client IP address(es), or ranges of address(es)
+REM (dash\-separated, as IP1\-IP2)\&.
+
+REM The following goes as one long command line:
+
+powershell\&.exe \-Command "Start\-Process netsh\&.exe \-ArgumentList
+  \e"advfirewall firewall add rule name=NUT\-upsd\-data\-server
+    dir=in action=allow localip=ANY remoteip=ANY
+    program=%ProgramFiles%\eNUT\esbin\eupsd\&.exe
+    localport=3493 protocol=tcp\e" \-Verb RunAs"
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Keep in mind that by default NUT \fBupsd\fR(8) only listens on localhost, so you would need to add some LISTEN directives in \fBupsd.conf\fR(5) as well in this case\&.
+.SH "OPTIONS"
+.sp
+\fBnut\&.exe\fR is currently launched with no arguments when it is intended to run as the implementation of a registered Windows service; it would error out otherwise\&.
+.PP
+\fB/?\fR
+.RS 4
+Display the help text and exit\&.
+.RE
+.PP
+\fB\-h\fR
+.RS 4
+Display the help text and exit\&.
+.RE
+.PP
+\fB\-V\fR
+.RS 4
+Display NUT version and exit\&.
+.RE
+.PP
+\fB\-D\fR
+.RS 4
+Raise the debug level\&. Use this multiple times for additional details\&. The non\-trivial debug level would be passed down to launched NUT programs\&. Primarily useful for troubleshooting with the non\-service mode\&.
+.RE
+.PP
+\fB\-I\fR
+.RS 4
+Install as a Windows service called "Network UPS Tools"\&.
+.RE
+.PP
+\fB\-U\fR
+.RS 4
+Uninstall the Windows service\&.
+.RE
+.PP
+\fB\-N\fR
+.RS 4
+Run once in non\-service mode (for troubleshooting)\&.
+.RE
+.PP
+\fBstart\fR
+.RS 4
+Install as a Windows service called "Network UPS Tools" (if not yet done), and try to start this service\&.
+.RE
+.PP
+\fBstop\fR
+.RS 4
+Try to stop a Windows service called "Network UPS Tools"\&.
+.RE
+.SH "DIAGNOSTICS"
+.sp
+\fBnut\&.exe\fR should not interact with console message buffers (stdout, stderr) much, except when explicitly asked to (e\&.g\&. displaying help and NUT version, running with verbose debug mode) or when exiting after an attempted service initialization while not running in a service context\&.
+.sp
+Most of normal logging from \fBnut\&.exe\fR goes to the Windows Event Log\&.
+.sp
+Launched NUT programs may emit messages of their own; their fate when no console is attached is questionable\&.
+.SH "SEE ALSO"
+.sp
+\fBnut.conf\fR(5), \fBups.conf\fR(5), \fBnutupsdrv\fR(8), \fBupsd\fR(8), \fBupsd.conf\fR(5), \fBupsd.users\fR(5), \fBupsmon\fR(8), \fBupsmon.conf\fR(5)
+.SS "Internet resources:"
+.sp
+The NUT (Network UPS Tools) home page: https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/

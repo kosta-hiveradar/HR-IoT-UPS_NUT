@@ -1,0 +1,81 @@
+'\" t
+.\"     Title: libupsclient-config
+.\"    Author: [see the "AUTHORS" section]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "LIBUPSCLIENT\-CONFIG" "1" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+libupsclient-config \- Script to get information about the installed version of libupsclient
+.SH "SYNOPSIS"
+.sp
+\fBlibupsclient\-config\fR [\-\-version] [\-\-libs] [\-\-cflags]
+.SH "DESCRIPTION"
+.sp
+\fBlibupsclient\-config\fR is a tool that is used to determine the compiler and linker flags that should be used to compile and link programs that use the \fBlibupsclient\fR from the Network UPS Tools project (also known as the "upscli" API)\&.
+.sp
+It allows to simplify build automation for systems without a pkg\-config implementation which would instead use the libupsclient\&.pc file installed with the NUT development files\&.
+.sp
+Note that to rebuild current NUT with same settings as the installed NUT v2\&.8\&.1 or newer, you can use lib/libupsclient\-config \-\-config\-flags, where supported\&. Note that the pkg\-config manifest libupsclient\&.pc does not easily convey this information\&.
+.SH "OPTIONS"
+.sp
+\fBlibupsclient\-config\fR accepts the following options:
+.PP
+\fB\-\-version\fR
+.RS 4
+Print the currently installed version of
+\fBlibupsclient\fR
+on the standard output\&.
+.RE
+.PP
+\fB\-\-libs\fR
+.RS 4
+Print the linker flags that are necessary to link a
+\fBlibupsclient\fR
+program\&.
+.RE
+.PP
+\fB\-\-cflags\fR
+.RS 4
+Print the compiler flags that are necessary to compile a
+\fBlibupsclient\fR
+program\&.
+.RE
+.PP
+\fB\-\-config\-flags\fR
+.RS 4
+Print the flags passed to
+configure
+script when this installation of NUT was originally built (supported since release v2\&.8\&.1)\&.
+.RE
+.SH "AUTHORS"
+.sp
+This manual page was written by Arnaud Quette <aquette\&.dev@gmail\&.com>\&.
+.SH "SEE ALSO"
+.sp
+\fBupsclient\fR(3), \fBnutclient\fR(3)
+.SS "Internet resources:"
+.sp
+The NUT (Network UPS Tools) home page: https://www\&.networkupstools\&.org/historic/v2\&.8\&.4/

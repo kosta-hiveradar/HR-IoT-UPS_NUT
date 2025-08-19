@@ -1,0 +1,85 @@
+'\" t
+.\"     Title: nutscan_ip_ranges_iter_init
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "NUTSCAN_IP_RANGES_IT" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+nutscan_ip_ranges_iter_init \- Begin iteration of an IP address range using a `nutscan_ip_range_list_iter_t` structure\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <nut\-scan\&.h>
+
+        char * nutscan_ip_ranges_iter_init(
+                nutscan_ip_range_list_iter_t *irliter,
+                const nutscan_ip_range_list_t *irl);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBnutscan_ip_ranges_iter_init()\fR function can prepare an iterator from the specified nutscan_ip_range_list_t structure, saving it into the caller\-provided nutscan_ip_range_list_iter_t helper object\&.
+.sp
+Different iterators may be created to walk the same nutscan_ip_range_list_t list from different scans independently, but the list and its contents should not be freed while anyone references it\&.
+.sp
+This function skips work if:
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the structure pointer is
+NULL
+(NULL
+is returned);
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+the structure pointer\(cqs
+ip_range
+list is
+NULL
+(NULL
+is returned)\&.
+.RE
+.sp
+Returns the first IP address from the first registered IP address range\&. Subsequent addresses can be returned by nutscan_ip_ranges_iter_inc()\&. The caller SHOULD NOT free this string while iterating\&.
+.SH "NOTES"
+.sp
+Technically, the function is currently defined in \fInutscan\-ip\&.h\fR file\&.
+.SH "SEE ALSO"
+.sp
+\fBnutscan_init_ip_ranges\fR(3), \fBnutscan_free_ip_ranges\fR(3), \fBnutscan_cidr_to_ip\fR(3), \fBnutscan_ip_ranges_iter_inc\fR(3)

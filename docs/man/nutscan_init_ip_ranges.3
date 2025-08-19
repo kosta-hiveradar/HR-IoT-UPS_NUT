@@ -1,0 +1,51 @@
+'\" t
+.\"     Title: nutscan_init_ip_ranges
+.\"    Author: [FIXME: author] [see http://www.docbook.org/tdg5/en/html/author]
+.\" Generator: DocBook XSL Stylesheets vsnapshot <http://docbook.sf.net/>
+.\"      Date: 08/08/2025
+.\"    Manual: NUT Manual
+.\"    Source: Network UPS Tools 2.8.4
+.\"  Language: English
+.\"
+.TH "NUTSCAN_INIT_IP_RANG" "3" "08/08/2025" "Network UPS Tools 2\&.8\&.4" "NUT Manual"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+nutscan_init_ip_ranges \- Initialize contents of a `nutscan_ip_range_list_t` structure (and optionally create one in the first place)\&.
+.SH "SYNOPSIS"
+.sp
+.nf
+        #include <nut\-scan\&.h>
+
+        nutscan_ip_range_list_t * nutscan_init_ip_ranges(nutscan_ip_range_list_t *irl);
+.fi
+.SH "DESCRIPTION"
+.sp
+The \fBnutscan_init_ip_ranges()\fR function can prepare a nutscan_ip_range_list_t structure by zeroing out its fields\&. If the argument is NULL, the structure is dynamically allocated\&. Either way, a pointer to it is returned\&.
+.sp
+A structure passed by caller is not assumed to have any valid contents to free, as it may have garbage from stack after allocation\&.
+.sp
+The caller must free the contents of the structure after completing its use by calling nutscan_free_ip_ranges (after which the structure can be re\-used), and explicitly free() the structure object itself if it was allocated dynamically (e\&.g\&. by originally calling nutscan_init_ip_ranges(NULL))\&.
+.SH "NOTES"
+.sp
+Technically, the function is currently defined in \fInutscan\-ip\&.h\fR file\&.
+.SH "SEE ALSO"
+.sp
+\fBnutscan_free_ip_ranges\fR(3), \fBnutscan_add_ip_range\fR(3), \fBnutscan_stringify_ip_ranges\fR(3), \fBnutscan_cidr_to_ip\fR(3), \fBnutscan_ip_ranges_iter_init\fR(3), \fBnutscan_ip_ranges_iter_inc\fR(3)
