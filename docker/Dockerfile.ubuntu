@@ -1,5 +1,5 @@
-# Multi-arch NUT 2.8.4 build for Raspberry Pi ARM64 from x86_64 host
-FROM debian:bookworm-slim AS builder
+# Multi-arch NUT 2.8.4 build for Raspberry Pi ARM64 - Ubuntu Noble base
+FROM ubuntu:noble AS builder
 
 # Build arguments for cross-compilation
 ARG TARGETPLATFORM
@@ -8,8 +8,9 @@ ARG TARGETOS
 ARG TARGETARCH
 
 ENV NUT_VERSION=2.8.4
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install build dependencies
+# Install build dependencies (Ubuntu has better ARM64 emulation support)
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
@@ -18,15 +19,14 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     autoconf \
     automake \
-    libtool && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    libtool \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Download and build NUT 2.8.4 with cross-compilation
+# Download and build NUT 2.8.4
 WORKDIR /tmp
 RUN wget https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION}/nut-${NUT_VERSION}.tar.gz && \
     tar xfz nut-${NUT_VERSION}.tar.gz && \
     cd nut-${NUT_VERSION} && \
-    # Configure NUT 2.8.4 for native compilation
     ./configure \
         --prefix=/opt/nut \
         --sysconfdir=/opt/nut/etc \
@@ -50,29 +50,30 @@ RUN wget https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION
     rm -rf /tmp/nut-${NUT_VERSION} /tmp/nut-${NUT_VERSION}.tar.gz
 
 # Runtime image for target platform  
-FROM debian:bookworm-slim
+FROM ubuntu:noble
 
 ARG TARGETARCH
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies (use newer Debian for better ARM64 QEMU support)
+# Install runtime dependencies (Ubuntu Noble has excellent Raspberry Pi support)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
-    usbutils && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    usbutils \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Create nut user with proper USB permissions for Raspberry Pi
 RUN groupadd -r nut && \
     useradd -r -g nut -d /var/run/nut -s /sbin/nologin nut && \
     usermod -a -G plugdev,dialout nut
 
-# Copy NUT binaries from builder (cross-compiled for ARM64)
+# Copy NUT binaries from builder
 COPY --from=builder /tmp/install/opt/nut/bin/upsc /opt/nut/bin/
 COPY --from=builder /tmp/install/opt/nut/bin/nut-scanner /opt/nut/bin/
 COPY --from=builder /tmp/install/opt/nut/sbin/upsd /opt/nut/sbin/
 COPY --from=builder /tmp/install/opt/nut/sbin/upsmon /opt/nut/sbin/
 COPY --from=builder /tmp/install/opt/nut/sbin/upsdrvctl /opt/nut/sbin/
 COPY --from=builder /tmp/install/opt/nut/lib/ /opt/nut/lib/
-COPY --from=builder /tmp/install/opt/nut/share/nut/ /opt/nut/share/nut/
+COPY --from=builder /tmp/install/opt/nut/share/ /opt/nut/share/
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /var/run/nut /opt/nut/etc /var/state/ups && \
@@ -83,15 +84,9 @@ RUN mkdir -p /var/run/nut /opt/nut/etc /var/state/ups && \
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Configuration optimized for auto-detection and 2.8.4 features
-RUN echo "MODE=standalone" > /opt/nut/etc/nut.conf && \
-    echo "[auto-ups]" > /opt/nut/etc/ups.conf && \
-    echo "    driver = usbhid-ups" >> /opt/nut/etc/ups.conf && \
-    echo "    port = auto" >> /opt/nut/etc/ups.conf && \
-    echo "    desc = \"Auto-detected USB UPS\"" >> /opt/nut/etc/ups.conf && \
-    echo "    # NUT 2.8.4 timeout improvements" >> /opt/nut/etc/ups.conf && \
-    echo "    interrupt_pipe_no_events_tolerance = 5" >> /opt/nut/etc/ups.conf && \
-    chown nut:nut /opt/nut/etc/*.conf
+# Copy standard NUT configuration files
+COPY standard_configs/ /opt/nut/etc/
+RUN chown nut:nut /opt/nut/etc/*.conf && chown nut:nut /opt/nut/etc/upsd.users
 
 # Set library path for cross-compiled binaries
 ENV LD_LIBRARY_PATH=/opt/nut/lib
@@ -100,5 +95,8 @@ ENV PATH="/opt/nut/bin:/opt/nut/sbin:${PATH}"
 # Expose NUT server port for IoT dashboard
 EXPOSE 3493
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Add health check for container monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /opt/nut/bin/upsc auto-ups@localhost > /dev/null || exit 1
 
+ENTRYPOINT ["/entrypoint.sh"]

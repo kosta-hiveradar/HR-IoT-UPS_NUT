@@ -8,10 +8,6 @@ while ! /opt/nut/sbin/upsdrvctl -u root start; do
 done
 echo "UPS driver started successfully."
 
-# Start the NUT server
-/opt/nut/sbin/upsd -u root
-
-# Start the NUT monitor in the foreground
-# The -D flag is important to keep the container running
-# and to see log messages.
-exec /opt/nut/sbin/upsmon -D
+# Start the NUT server in foreground mode for debugging
+echo "Starting NUT server..."
+exec /opt/nut/sbin/upsd -D -F
