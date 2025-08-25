@@ -1,0 +1,44 @@
+services:
+  ups-nut:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.hotplug
+    container_name: ups-nut-hotplug
+    restart: unless-stopped
+    privileged: true
+    mem_limit: 256m
+    memswap_limit: 256m
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - "3493:3493"
+    volumes:
+      # Persist configuration files (optional - will be auto-generated)
+      - ./config/nut:/opt/nut/etc
+      # Persist state and runtime data
+      - ups-nut-state:/var/run/nut
+      - ups-nut-logs:/var/log/nut
+      # Mount udev rules for host-level hotplug (optional)
+      # - ./docker/99-nut-ups.rules:/etc/udev/rules.d/99-nut-ups.rules:ro
+    environment:
+      - TZ=UTC
+      # Optional: Configure scan interval (default: 10 seconds)
+      - SCAN_INTERVAL=10
+      # Optional: Enable debug logging
+      - DEBUG=1
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "/opt/nut/bin/upsc -l > /dev/null 2>&1 || echo 'No UPS detected - waiting for hotplug'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ups-nut-state:
+  ups-nut-logs:
+
+networks:
+  iot-network:
+    driver: bridge

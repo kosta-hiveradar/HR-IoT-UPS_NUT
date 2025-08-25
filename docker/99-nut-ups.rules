@@ -1,0 +1,24 @@
+# Generic NUT UPS hotplug rules for USB devices
+# Place in /etc/udev/rules.d/ to enable automatic UPS detection
+# This version uses generic detection instead of hardcoded vendor IDs
+
+# Detect HID Power Device Class (most UPS devices)
+# Class 03 (HID), Subclass 00, Protocol 00 - Generic HID
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{bInterfaceClass}=="03", ATTRS{bInterfaceSubClass}=="00", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
+
+# Detect devices with "UPS" or power-related terms in product description
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{product}=="*UPS*", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{product}=="*Battery*", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{product}=="*Power*Supply*", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
+
+# Set proper permissions for all HID devices (covers most UPS)
+SUBSYSTEM=="usb", ATTRS{bInterfaceClass}=="03", MODE="0664", GROUP="nut"
+
+# Create generic symlinks for UPS devices
+SUBSYSTEM=="usb", ATTRS{bInterfaceClass}=="03", ATTRS{product}=="*UPS*", SYMLINK+="ups-device-%k"
+SUBSYSTEM=="usb", ATTRS{product}=="*UPS*", SYMLINK+="ups-device-%k"
+
+# Additional detection for USB devices that might be UPS but don't follow HID
+# Trigger on any USB device that could be power-related
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{manufacturer}=="*Power*", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
+SUBSYSTEM=="usb", ACTION=="add|remove", ATTRS{manufacturer}=="*UPS*", TAG+="systemd", ENV{SYSTEMD_WANTS}="nut-monitor.service"
