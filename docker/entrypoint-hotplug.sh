@@ -20,7 +20,9 @@ mkdir -p "$(dirname "$LOG_FILE")"
 
 # Logging function
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    echo "$msg" >> "$LOG_FILE"
+    echo "$msg" >&2  # Send to stderr instead of stdout
 }
 
 # Check if upsd is running
@@ -32,15 +34,23 @@ is_upsd_running() {
 stop_all_drivers() {
     log "Stopping all UPS drivers..."
     
-    # Kill any running drivers
-    pkill -f "usbhid-ups" || true
-    pkill -f "upsdrvctl" || true
+    # Stop drivers gracefully first
+    /opt/nut/sbin/upsdrvctl stop || true
+    sleep 2
     
-    # Clean up PID files
+    # Kill any remaining running drivers
+    pkill -TERM -f "usbhid-ups" || true
+    pkill -TERM -f "upsdrvctl" || true
+    sleep 2
+    
+    # Force kill if still running
+    pkill -KILL -f "usbhid-ups" || true
+    pkill -KILL -f "upsdrvctl" || true
+    
+    # Clean up PID files and sockets
     find "$PID_DIR" -name "*.pid" -delete 2>/dev/null || true
-    
-    # Remove sockets
     find "$PID_DIR" -name "usbhid-ups-*" -type s -delete 2>/dev/null || true
+    find /var/run/nut/ -name "usbhid-ups-*" -type s -delete 2>/dev/null || true
     
     sleep 2
 }
@@ -201,7 +211,7 @@ EOF
     
     local conf_content="# Auto-generated NUT configuration
 # Primary device always named 'my-ups' for dashboard compatibility
-# Last updated: $(date)
+# Last updated: $(date '+%Y-%m-%d %H:%M:%S')
 
 [my-ups]
     driver = usbhid-ups
@@ -218,9 +228,6 @@ EOF
     desc = \"$description\"
     # Hotplug-optimized settings
     pollinterval = 2
-    maxage = 15
-    ups.delay.start = 20
-    ups.delay.shutdown = 20
 "
     
     # Add additional devices if present (secondary UPS units)
@@ -248,8 +255,7 @@ EOF
             
             conf_content+="
     desc = \"$description\"
-    pollinterval = 2
-    maxage = 15"
+    pollinterval = 2"
         done
     fi
     
@@ -413,6 +419,26 @@ trap cleanup TERM INT
 
 # Main execution
 main() {
+    # Prevent multiple instances with PID-based lock
+    local LOCK_FILE="/var/run/nut/entrypoint.lock"
+    local PID_FILE="/var/run/nut/entrypoint.pid"
+    
+    # Check if another instance is running
+    if [[ -f "$PID_FILE" ]]; then
+        local old_pid=$(cat "$PID_FILE" 2>/dev/null)
+        if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+            echo "Another entrypoint instance is already running (PID: $old_pid)" >&2
+            exit 1
+        fi
+    fi
+    
+    # Create lock and PID file
+    mkdir -p "$(dirname "$LOCK_FILE")"
+    echo $$ > "$PID_FILE"
+    
+    # Cleanup lock on exit
+    trap 'rm -f "$LOCK_FILE" "$PID_FILE"; cleanup' TERM INT EXIT
+    
     log "=== NUT Hotplug Entrypoint Started ==="
     log "Detected system: $(uname -a)"
     

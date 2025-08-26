@@ -1,0 +1,23 @@
+services:
+  ups-nut-static:
+    image: kostahiveradar/ups-nut-2.8.4-arm64:0.96
+    container_name: ups-nut-static
+    restart: unless-stopped
+    privileged: true
+    platform: linux/arm64
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - "3493:3493"
+    volumes:
+      - ups-nut-state:/var/run/nut
+      - ups-nut-logs:/var/log/nut
+    environment:
+      - TZ=UTC
+      - SCAN_INTERVAL=999999
+      - DEBUG=1
+    entrypoint: ["/bin/bash", "-c", "echo 'MODE=standalone' > /opt/nut/etc/nut.conf && echo -e '[my-ups]\\n    driver = usbhid-ups\\n    port = auto\\n    desc = \"EcoFlow UPS\"' > /opt/nut/etc/ups.conf && chown nut:nut /opt/nut/etc/*.conf && /opt/nut/sbin/upsdrvctl start && /opt/nut/sbin/upsd -D -F"]
+
+volumes:
+  ups-nut-state:
+  ups-nut-logs:

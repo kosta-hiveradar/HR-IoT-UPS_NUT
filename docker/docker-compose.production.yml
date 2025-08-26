@@ -1,0 +1,27 @@
+services:
+  ups-nut-hot:
+    image: kostahiveradar/ups-nut-2.8.4-arm64:0.91
+    container_name: ups-nut-hot
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - "3493:3493"
+    volumes:
+      - ups-nut-state:/var/run/nut
+      - ups-nut-logs:/var/log/nut
+    environment:
+      - TZ=UTC
+      - SCAN_INTERVAL=10
+      - DEBUG=1
+    healthcheck:
+      test: ["CMD", "sh", "-c", "/opt/nut/bin/upsc -l > /dev/null 2>&1 || echo 'No UPS detected - waiting for hotplug'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ups-nut-state:
+  ups-nut-logs:

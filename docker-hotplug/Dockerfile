@@ -1,4 +1,4 @@
-# Enhanced NUT 2.8.4 with USB hotplug support for Raspberry Pi ARM64
+# Smart NUT 2.8.4 with intelligent USB hotplug for Raspberry Pi ARM64
 FROM debian:bookworm-slim AS builder
 
 # Build arguments for cross-compilation
@@ -51,22 +51,21 @@ RUN wget https://github.com/networkupstools/nut/releases/download/v${NUT_VERSION
     make install DESTDIR=/tmp/install && \
     rm -rf /tmp/nut-${NUT_VERSION} /tmp/nut-${NUT_VERSION}.tar.gz
 
-# Runtime image with hotplug support
+# Runtime image with smart hotplug support
 FROM debian:bookworm-slim
 
 ARG TARGETARCH
 
-# Install runtime dependencies including libltdl and USB utilities
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libusb-1.0-0 \
     usbutils \
     libltdl7 \
     procps \
-    inotify-tools \
     bash && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Create nut user with proper USB and system permissions
+# Create nut user with proper USB permissions
 RUN groupadd -r nut && \
     useradd -r -g nut -d /var/run/nut -s /sbin/nologin nut && \
     usermod -a -G plugdev,dialout nut
@@ -90,22 +89,22 @@ RUN mkdir -p \
 # Copy standard configuration files
 COPY standard_configs/ /opt/nut/etc/
 
-# Copy enhanced entrypoint script
-COPY docker/entrypoint-hotplug.sh /entrypoint.sh
+# Copy smart hotplug entrypoint script
+COPY docker-hotplug/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Set proper ownership for config files
+RUN chown -R nut:nut /opt/nut/etc/
 
 # Set library path for NUT binaries
 ENV LD_LIBRARY_PATH=/opt/nut/lib
 ENV PATH="/opt/nut/bin:/opt/nut/sbin:${PATH}"
 
-# Set proper ownership for config files
-RUN chown -R nut:nut /opt/nut/etc/
-
 # Expose NUT server port
 EXPOSE 3493
 
-# Health check using dynamic UPS detection
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+# Health check using UPS detection
+HEALTHCHECK --interval=60s --timeout=15s --start-period=60s --retries=3 \
     CMD /opt/nut/bin/upsc -l > /dev/null 2>&1 || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
