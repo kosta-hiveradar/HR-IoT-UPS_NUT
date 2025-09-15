@@ -28,17 +28,27 @@ get_ups_fingerprint() {
     # Create a reliable fingerprint of connected UPS devices
     local fingerprint=""
     
-    # Method 1: Try nut-scanner first (most reliable)
-    if /opt/nut/bin/nut-scanner -U -q 2>/dev/null | grep -q "driver.*=.*usbhid-ups"; then
-        fingerprint=$(lsusb | grep -E "(UPS|EcoFlow|APC|Tripp|CyberPower)" | sort)
+    # Method 1: Try nut-scanner first (most reliable for any UPS)
+    local scanner_output=$(/opt/nut/bin/nut-scanner -U -q 2>/dev/null)
+    if echo "$scanner_output" | grep -q "driver.*=.*usbhid-ups"; then
+        # Get all USB devices that nut-scanner detected as UPS-capable
+        fingerprint=$(lsusb | sort)
         if [[ -n "$fingerprint" ]]; then
             echo "scanner:$fingerprint"
             return 0
         fi
     fi
     
-    # Method 2: Fallback to lsusb HID devices that might be UPS
-    fingerprint=$(lsusb | grep -E "(3746:ffff|UPS|Power)" | sort)
+    # Method 2: Detect any HID-class devices that could be UPS
+    # Look for USB devices with HID interface class (03) which most UPS use
+    fingerprint=$(lsusb -v 2>/dev/null | grep -B5 -A5 "bInterfaceClass.*3 Human Interface Device" | grep "Bus\|Device" | sort | uniq)
+    if [[ -n "$fingerprint" ]]; then
+        echo "hid:$fingerprint"
+        return 0
+    fi
+    
+    # Method 3: Fallback to any USB device (for manual driver assignment)
+    fingerprint=$(lsusb | grep -E "(Power|Battery|UPS|Uninterrupt)" | sort)
     if [[ -n "$fingerprint" ]]; then
         echo "lsusb:$fingerprint"
     else
@@ -154,10 +164,10 @@ start_nut_services() {
 main() {
     local PID_FILE="/var/run/nut/smart-hotplug.pid"
     
-    # Simple PID lock
+    # Simple PID lock (exclude PID 1 which is this container's main process)
     if [[ -f "$PID_FILE" ]]; then
         local old_pid=$(cat "$PID_FILE" 2>/dev/null)
-        if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+        if [[ -n "$old_pid" ]] && [[ "$old_pid" != "1" ]] && kill -0 "$old_pid" 2>/dev/null; then
             log "Another hotplug instance already running (PID: $old_pid)"
             exit 1
         fi
