@@ -1,7 +1,7 @@
 services:
   ups-nut-smart:
-    image: ups-nut-smart:latest
-    container_name: ups-nut-smart
+    image: kostahiveradar/ups-nut-2.8.4-arm64:smart-fixed-v2-15sep
+    container_name: ups-nut-smart-2
     restart: unless-stopped
     privileged: true
     platform: linux/arm64
