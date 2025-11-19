@@ -1,0 +1,805 @@
+#cloud-config
+
+###############################################################################
+# HiveRadar Edge Data Center - Cloud-Init Configuration
+###############################################################################
+# Purpose: Automated provisioning of Raspberry Pi edge devices
+# Version: 2.0
+# Target OS: Ubuntu Server 24.04 LTS ARM64
+# Last Updated: 2025-11-19
+###############################################################################
+
+# Hostname will be set by init script after reading serial number
+preserve_hostname: false
+
+# Locale and timezone (can be overridden per-device via config server)
+locale: en_US.UTF-8
+timezone: UTC
+
+###############################################################################
+# USER CONFIGURATION
+###############################################################################
+
+users:
+  - name: hiveradar
+    groups: [sudo, docker, adm]
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    lock_passwd: true  # Disable password auth
+    ssh_authorized_keys:
+      # REPLACE THIS with your team's public SSH keys
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... hiveradar-deployment-key-1
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... hiveradar-deployment-key-2
+      # Generate with: ssh-keygen -t ed25519 -C "hiveradar-deployment"
+      # IMPORTANT: Add all team member keys who need emergency access
+
+# Disable root login and password authentication
+disable_root: true
+ssh_pwauth: false
+ssh_deletekeys: true  # Remove default SSH host keys (regenerate on first boot)
+
+###############################################################################
+# PACKAGE INSTALLATION
+###############################################################################
+
+# Update package index on first boot
+package_update: true
+
+# Upgrade all packages to latest versions
+package_upgrade: true
+
+# Reboot if kernel was upgraded (at end of cloud-init)
+package_reboot_if_required: false  # We handle reboot in power_state section
+
+# Packages to install
+packages:
+  # Container platform
+  - docker.io
+  - docker-compose
+
+  # Security
+  - ufw                   # Uncomplicated Firewall
+  - fail2ban              # Brute-force protection
+  - unattended-upgrades   # Automatic security updates
+  - apparmor              # Mandatory access control
+  - apparmor-utils
+
+  # System utilities
+  - curl
+  - wget
+  - jq                    # JSON parsing for scripts
+  - git
+  - htop
+  - net-tools
+  - lm-sensors            # Temperature monitoring
+  - i2c-tools             # For UPS I2C communication
+
+  # Monitoring (optional but recommended)
+  - prometheus-node-exporter
+
+  # mDNS for .local domain
+  - avahi-daemon
+  - avahi-utils
+  - libnss-mdns
+
+###############################################################################
+# FILE CREATION
+###############################################################################
+
+write_files:
+  #---------------------------------------------------------------------------
+  # Main initialization script - Runs after package installation
+  #---------------------------------------------------------------------------
+  - path: /usr/local/bin/hiveradar-init.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      ###########################################################################
+      # HiveRadar Edge Device Initialization Script
+      ###########################################################################
+      # This script:
+      # 1. Reads device serial number
+      # 2. Fetches device-specific config from central server
+      # 3. Installs and configures Portainer Edge Agent
+      # 4. Sets hostname and timezone
+      # 5. Registers device with monitoring (optional)
+      ###########################################################################
+
+      # Logging setup
+      LOG_FILE="/var/log/hiveradar-init.log"
+      exec 1> >(tee -a "$LOG_FILE")
+      exec 2>&1
+
+      echo "=========================================================================="
+      echo "HiveRadar Edge Device Initialization"
+      echo "Started: $(date)"
+      echo "=========================================================================="
+
+      #---------------------------------------------------------------------------
+      # CONFIGURATION
+      #---------------------------------------------------------------------------
+
+      # IMPORTANT: Replace this with your actual config server URL
+      CONFIG_SERVER="https://config.hiveradar.com"
+
+      # Fallback config server (if primary fails)
+      CONFIG_SERVER_FALLBACK="https://config-backup.hiveradar.com"
+
+      # Where to find device serial number (written during manufacturing)
+      SERIAL_FILE="/opt/hiveradar/serial.txt"
+
+      # Temporary config storage
+      CONFIG_FILE="/tmp/edge-config.json"
+
+      # Permanent config storage
+      PERMANENT_CONFIG="/etc/hiveradar/config.json"
+
+      #---------------------------------------------------------------------------
+      # STEP 1: GET DEVICE SERIAL NUMBER
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 1: Reading device serial number..."
+      echo "-----------------------------------------------------------------------"
+
+      # Try to read custom serial number (written during manufacturing)
+      if [ -f "$SERIAL_FILE" ]; then
+        SERIAL=$(cat "$SERIAL_FILE" | tr -d '[:space:]')
+        echo "✓ Found custom serial number: $SERIAL"
+        SERIAL_SOURCE="custom"
+      else
+        # Fallback: Use Raspberry Pi hardware serial
+        HW_SERIAL=$(cat /proc/cpuinfo | grep Serial | cut -d ' ' -f 2 | tr -d '[:space:]')
+        if [ -z "$HW_SERIAL" ] || [ "$HW_SERIAL" = "0000000000000000" ]; then
+          echo "✗ ERROR: Could not read hardware serial number"
+          echo "  This device may not be properly initialized."
+          echo "  Using fallback serial: UNPROVISIONED"
+          SERIAL="UNPROVISIONED"
+          SERIAL_SOURCE="fallback"
+        else
+          SERIAL="$HW_SERIAL"
+          echo "⚠ Using hardware serial number: $SERIAL"
+          echo "  (Custom serial not found at $SERIAL_FILE)"
+          SERIAL_SOURCE="hardware"
+        fi
+      fi
+
+      # Save serial number if not already saved
+      mkdir -p /opt/hiveradar
+      echo "$SERIAL" > /opt/hiveradar/detected-serial.txt
+      chmod 444 /opt/hiveradar/detected-serial.txt
+
+      #---------------------------------------------------------------------------
+      # STEP 2: FETCH DEVICE CONFIGURATION
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 2: Fetching device configuration..."
+      echo "-----------------------------------------------------------------------"
+
+      CONFIG_URL="${CONFIG_SERVER}/edge/${SERIAL}.json"
+      echo "Config URL: $CONFIG_URL"
+
+      # Retry logic with fallback server
+      fetch_config() {
+        local url=$1
+        local retries=3
+        local delay=10
+
+        for i in $(seq 1 $retries); do
+          echo "Attempt $i of $retries..."
+
+          if curl -f -s -m 30 -o "$CONFIG_FILE" "$url"; then
+            echo "✓ Configuration fetched successfully"
+            return 0
+          else
+            if [ $i -lt $retries ]; then
+              echo "⚠ Attempt $i failed, retrying in ${delay}s..."
+              sleep $delay
+            fi
+          fi
+        done
+
+        return 1
+      }
+
+      # Try primary server
+      if ! fetch_config "$CONFIG_URL"; then
+        echo "⚠ Primary config server failed, trying fallback..."
+
+        # Try fallback server
+        FALLBACK_URL="${CONFIG_SERVER_FALLBACK}/edge/${SERIAL}.json"
+        if ! fetch_config "$FALLBACK_URL"; then
+          echo "✗ ERROR: Failed to fetch configuration from all servers"
+          echo "  Using default configuration..."
+
+          # Create default configuration
+          cat > "$CONFIG_FILE" << 'DEFAULTCONFIG'
+      {
+        "serial": "default",
+        "customer": "Unconfigured",
+        "site": "Default Configuration",
+        "portainer": {
+          "url": "https://portainer.hiveradar.com",
+          "edge_id": "edge_default",
+          "edge_key": "CHANGE_ME_IN_CONFIG_SERVER"
+        },
+        "environment": {
+          "TZ": "UTC",
+          "CUSTOMER_ID": "UNASSIGNED",
+          "CUSTOMER_NAME": "Unconfigured Device"
+        },
+        "monitoring": {
+          "enabled": false
+        }
+      }
+      DEFAULTCONFIG
+
+          # Replace serial in default config
+          jq --arg serial "$SERIAL" '.serial = $serial' "$CONFIG_FILE" > "$CONFIG_FILE.tmp"
+          mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        fi
+      fi
+
+      # Validate JSON
+      if ! jq empty "$CONFIG_FILE" 2>/dev/null; then
+        echo "✗ ERROR: Invalid JSON in configuration file"
+        cat "$CONFIG_FILE"
+        exit 1
+      fi
+
+      echo "✓ Configuration loaded successfully"
+
+      #---------------------------------------------------------------------------
+      # STEP 3: PARSE CONFIGURATION
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 3: Parsing configuration..."
+      echo "-----------------------------------------------------------------------"
+
+      CUSTOMER=$(jq -r '.customer // "Unknown"' "$CONFIG_FILE")
+      SITE=$(jq -r '.site // "Unknown"' "$CONFIG_FILE")
+      PORTAINER_URL=$(jq -r '.portainer.url' "$CONFIG_FILE")
+      PORTAINER_EDGE_ID=$(jq -r '.portainer.edge_id' "$CONFIG_FILE")
+      PORTAINER_EDGE_KEY=$(jq -r '.portainer.edge_key' "$CONFIG_FILE")
+      TIMEZONE=$(jq -r '.environment.TZ // "UTC"' "$CONFIG_FILE")
+      CUSTOMER_ID=$(jq -r '.environment.CUSTOMER_ID // "UNASSIGNED"' "$CONFIG_FILE")
+
+      echo "Serial Number:  $SERIAL"
+      echo "Customer:       $CUSTOMER"
+      echo "Site:           $SITE"
+      echo "Portainer URL:  $PORTAINER_URL"
+      echo "Edge ID:        $PORTAINER_EDGE_ID"
+      echo "Timezone:       $TIMEZONE"
+      echo "Customer ID:    $CUSTOMER_ID"
+
+      #---------------------------------------------------------------------------
+      # STEP 4: SET HOSTNAME
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 4: Setting hostname..."
+      echo "-----------------------------------------------------------------------"
+
+      # Generate hostname from serial
+      HOSTNAME="hiveradar-edc-${SERIAL}"
+
+      # Set hostname
+      hostnamectl set-hostname "$HOSTNAME"
+
+      # Update /etc/hosts
+      echo "127.0.1.1 $HOSTNAME" >> /etc/hosts
+
+      # Set mDNS hostname for .local access
+      # Default will be EDCdashboard.local (can customize per-device if needed)
+      if [ -f /etc/avahi/avahi-daemon.conf ]; then
+        sed -i "s/#host-name=.*/host-name=EDCdashboard/" /etc/avahi/avahi-daemon.conf
+        systemctl restart avahi-daemon || true
+      fi
+
+      echo "✓ Hostname set to: $HOSTNAME"
+      echo "✓ mDNS name: EDCdashboard.local"
+
+      #---------------------------------------------------------------------------
+      # STEP 5: SET TIMEZONE
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 5: Setting timezone..."
+      echo "-----------------------------------------------------------------------"
+
+      timedatectl set-timezone "$TIMEZONE"
+      echo "✓ Timezone set to: $TIMEZONE"
+
+      #---------------------------------------------------------------------------
+      # STEP 6: INSTALL PORTAINER EDGE AGENT
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 6: Installing Portainer Edge Agent..."
+      echo "-----------------------------------------------------------------------"
+
+      # Stop and remove existing agent if present
+      docker stop portainer_edge_agent 2>/dev/null || true
+      docker rm portainer_edge_agent 2>/dev/null || true
+
+      # Check if Portainer credentials are valid
+      if [ "$PORTAINER_EDGE_KEY" = "CHANGE_ME_IN_CONFIG_SERVER" ]; then
+        echo "⚠ WARNING: Portainer Edge Key not configured!"
+        echo "  Device will not connect to Portainer until key is set."
+        echo "  Skipping Portainer Agent installation."
+      else
+        # Install Portainer Edge Agent
+        echo "Installing Portainer Edge Agent..."
+
+        docker run -d \
+          --name portainer_edge_agent \
+          --restart=always \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v /var/lib/docker/volumes:/var/lib/docker/volumes \
+          -v /:/host \
+          -v portainer_agent_data:/data \
+          -e EDGE=1 \
+          -e EDGE_ID="${PORTAINER_EDGE_ID}" \
+          -e EDGE_KEY="${PORTAINER_EDGE_KEY}" \
+          -e EDGE_INSECURE_POLL=0 \
+          -e CAP_HOST_MANAGEMENT=1 \
+          -e EDGE_ASYNC=1 \
+          portainer/agent:latest
+
+        if [ $? -eq 0 ]; then
+          echo "✓ Portainer Edge Agent installed successfully"
+
+          # Wait a moment and check if it's running
+          sleep 5
+          if docker ps | grep -q portainer_edge_agent; then
+            echo "✓ Portainer Edge Agent is running"
+          else
+            echo "⚠ Portainer Edge Agent started but may have issues"
+            echo "  Check logs: docker logs portainer_edge_agent"
+          fi
+        else
+          echo "✗ Portainer Edge Agent installation failed"
+          echo "  This device will not appear in Portainer"
+        fi
+      fi
+
+      #---------------------------------------------------------------------------
+      # STEP 7: SAVE CONFIGURATION PERMANENTLY
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 7: Saving configuration..."
+      echo "-----------------------------------------------------------------------"
+
+      mkdir -p /etc/hiveradar
+      cp "$CONFIG_FILE" "$PERMANENT_CONFIG"
+      chmod 644 "$PERMANENT_CONFIG"
+
+      # Save metadata
+      cat > /etc/hiveradar/device-info.txt << EOF
+      Serial Number: $SERIAL
+      Serial Source: $SERIAL_SOURCE
+      Customer: $CUSTOMER
+      Site: $SITE
+      Customer ID: $CUSTOMER_ID
+      Hostname: $HOSTNAME
+      Timezone: $TIMEZONE
+      Provisioned: $(date -Iseconds)
+      Config Server: $CONFIG_SERVER
+      Portainer URL: $PORTAINER_URL
+      Edge ID: $PORTAINER_EDGE_ID
+      EOF
+
+      echo "✓ Configuration saved to $PERMANENT_CONFIG"
+
+      #---------------------------------------------------------------------------
+      # STEP 8: REGISTER WITH MONITORING (Optional)
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 8: Registering with monitoring..."
+      echo "-----------------------------------------------------------------------"
+
+      MONITORING_ENABLED=$(jq -r '.monitoring.enabled // false' "$CONFIG_FILE")
+
+      if [ "$MONITORING_ENABLED" = "true" ]; then
+        MONITORING_URL=$(jq -r '.monitoring.url // ""' "$CONFIG_FILE")
+
+        if [ -n "$MONITORING_URL" ]; then
+          echo "Registering device with monitoring service..."
+
+          curl -X POST "${MONITORING_URL}/register" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"serial\": \"$SERIAL\",
+              \"customer_id\": \"$CUSTOMER_ID\",
+              \"hostname\": \"$HOSTNAME\",
+              \"provisioned_at\": \"$(date -Iseconds)\",
+              \"portainer_edge_id\": \"$PORTAINER_EDGE_ID\"
+            }" || echo "⚠ Monitoring registration failed (non-critical)"
+
+          echo "✓ Monitoring registration attempted"
+        fi
+      else
+        echo "⚠ Monitoring not enabled for this device"
+      fi
+
+      #---------------------------------------------------------------------------
+      # STEP 9: CREATE SUCCESS MARKER
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "STEP 9: Finalizing..."
+      echo "-----------------------------------------------------------------------"
+
+      # Create marker file to indicate successful provisioning
+      touch /var/lib/cloud/instance/hiveradar-provisioned
+      echo "$(date -Iseconds)" > /opt/hiveradar/provisioned-at.txt
+
+      # Set permissions on hiveradar directory
+      chmod 755 /opt/hiveradar
+      chmod 444 /opt/hiveradar/*.txt /opt/hiveradar/*.json 2>/dev/null || true
+
+      #---------------------------------------------------------------------------
+      # COMPLETION
+      #---------------------------------------------------------------------------
+
+      echo ""
+      echo "=========================================================================="
+      echo "✓ HiveRadar Edge Device Initialization Complete!"
+      echo "=========================================================================="
+      echo "Serial:       $SERIAL"
+      echo "Customer:     $CUSTOMER"
+      echo "Site:         $SITE"
+      echo "Hostname:     $HOSTNAME"
+      echo "mDNS:         EDCdashboard.local"
+      echo "Timezone:     $TIMEZONE"
+      echo "Portainer:    $(docker ps | grep -q portainer_edge_agent && echo 'Running ✓' || echo 'Not running ⚠')"
+      echo "Completed:    $(date)"
+      echo "=========================================================================="
+      echo ""
+      echo "Next steps:"
+      echo "1. Device should appear in Portainer within 1-2 minutes"
+      echo "2. Portainer will deploy the appropriate stack based on Edge Groups"
+      echo "3. Services will be accessible at:"
+      echo "   - Dashboard: http://$(hostname -I | awk '{print $1}') or http://EDCdashboard.local"
+      echo "   - UPS: upsc my-ups@$(hostname -I | awk '{print $1}'):3493"
+      echo ""
+      echo "Log file: $LOG_FILE"
+      echo "=========================================================================="
+
+  #---------------------------------------------------------------------------
+  # Firewall configuration script
+  #---------------------------------------------------------------------------
+  - path: /usr/local/bin/configure-firewall.sh
+    permissions: '0755'
+    owner: root:root
+    content: |
+      #!/bin/bash
+      # HiveRadar Edge Device - Firewall Configuration
+
+      echo "Configuring UFW firewall..."
+
+      # Reset firewall to known state
+      ufw --force reset
+
+      # Default policies
+      ufw default deny incoming
+      ufw default allow outgoing
+
+      # Allow SSH (with rate limiting)
+      ufw limit 22/tcp comment 'SSH with rate limiting'
+
+      # Allow HTTP/HTTPS for dashboard
+      ufw allow 80/tcp comment 'Dashboard HTTP'
+      ufw allow 443/tcp comment 'Dashboard HTTPS'
+
+      # Allow UPS-NUT
+      ufw allow 3493/tcp comment 'NUT UPS monitoring'
+
+      # Allow StorMagic Witness
+      ufw allow 4174/tcp comment 'StorMagic Witness'
+      ufw allow 4174/udp comment 'StorMagic Witness'
+
+      # Allow mDNS (for .local domain resolution)
+      ufw allow 5353/udp comment 'mDNS'
+
+      # Allow Prometheus node-exporter (if monitoring enabled)
+      # ufw allow 9100/tcp comment 'Prometheus node-exporter'
+
+      # Enable firewall
+      ufw --force enable
+
+      # Show status
+      ufw status verbose
+
+      echo "✓ Firewall configured and enabled"
+
+  #---------------------------------------------------------------------------
+  # Fail2ban configuration for SSH protection
+  #---------------------------------------------------------------------------
+  - path: /etc/fail2ban/jail.local
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # HiveRadar Edge Device - Fail2ban Configuration
+
+      [DEFAULT]
+      # Ban for 1 hour
+      bantime = 3600
+
+      # 10-minute window for counting failures
+      findtime = 600
+
+      # Ban after 3 failed attempts
+      maxretry = 3
+
+      # Action: use UFW to block
+      banaction = ufw
+
+      # Email notifications (optional - configure if needed)
+      # destemail = alerts@hiveradar.com
+      # sendername = Fail2ban-EDC-%(name)s
+      # action = %(action_mwl)s
+
+      [sshd]
+      enabled = true
+      port = ssh
+      logpath = /var/log/auth.log
+      maxretry = 3
+
+      [sshd-ddos]
+      enabled = true
+      port = ssh
+      logpath = /var/log/auth.log
+      maxretry = 6
+
+  #---------------------------------------------------------------------------
+  # Unattended upgrades configuration - Automatic security updates
+  #---------------------------------------------------------------------------
+  - path: /etc/apt/apt.conf.d/50unattended-upgrades
+    permissions: '0644'
+    owner: root:root
+    content: |
+      // HiveRadar Edge Device - Automatic Updates Configuration
+
+      // Allowed update origins
+      Unattended-Upgrade::Allowed-Origins {
+          "${distro_id}:${distro_codename}-security";
+          "${distro_id}ESMApps:${distro_codename}-apps-security";
+          "${distro_id}ESM:${distro_codename}-infra-security";
+      };
+
+      // Packages to NOT auto-update (blacklist)
+      Unattended-Upgrade::Package-Blacklist {
+          // Example: "docker.io";
+      };
+
+      // Auto-cleanup
+      Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+      Unattended-Upgrade::MinimalSteps "true";
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+
+      // Auto-reboot if required (e.g., kernel updates)
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Automatic-Reboot-WithUsers "false";
+      Unattended-Upgrade::Automatic-Reboot-Time "03:00";  // 3 AM
+
+      // Logging
+      Unattended-Upgrade::SyslogEnable "true";
+      Unattended-Upgrade::SyslogFacility "daemon";
+
+  #---------------------------------------------------------------------------
+  # Kernel hardening via sysctl
+  #---------------------------------------------------------------------------
+  - path: /etc/sysctl.d/99-hiveradar-hardening.conf
+    permissions: '0644'
+    owner: root:root
+    content: |
+      # HiveRadar Edge Device - Kernel Hardening
+
+      # IP Forwarding (disable - not a router)
+      net.ipv4.ip_forward = 0
+      net.ipv6.conf.all.forwarding = 0
+
+      # SYN flood protection
+      net.ipv4.tcp_syncookies = 1
+      net.ipv4.tcp_max_syn_backlog = 2048
+      net.ipv4.tcp_synack_retries = 2
+      net.ipv4.tcp_syn_retries = 5
+
+      # IP spoofing protection
+      net.ipv4.conf.all.rp_filter = 1
+      net.ipv4.conf.default.rp_filter = 1
+
+      # Ignore ICMP redirects
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.default.accept_redirects = 0
+      net.ipv6.conf.all.accept_redirects = 0
+      net.ipv6.conf.default.accept_redirects = 0
+
+      # Ignore send redirects
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.default.send_redirects = 0
+
+      # Disable source packet routing
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.default.accept_source_route = 0
+      net.ipv6.conf.all.accept_source_route = 0
+      net.ipv6.conf.default.accept_source_route = 0
+
+      # Log suspicious packets
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.conf.default.log_martians = 1
+
+      # Kernel hardening
+      kernel.dmesg_restrict = 1
+      kernel.kptr_restrict = 2
+      kernel.yama.ptrace_scope = 1
+
+###############################################################################
+# SYSTEM CONFIGURATION - Run commands
+###############################################################################
+
+bootcmd:
+  # These run before any other configuration
+  - echo "HiveRadar EDC Cloud-Init Starting..." > /dev/console
+
+runcmd:
+  # These run after packages are installed and files are written
+
+  #---------------------------------------------------------------------------
+  # System updates
+  #---------------------------------------------------------------------------
+  - echo "Updating system packages..." > /dev/console
+  - apt-get update
+  - DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
+  #---------------------------------------------------------------------------
+  # Configure firewall
+  #---------------------------------------------------------------------------
+  - echo "Configuring firewall..." > /dev/console
+  - /usr/local/bin/configure-firewall.sh
+
+  #---------------------------------------------------------------------------
+  # Docker setup
+  #---------------------------------------------------------------------------
+  - echo "Configuring Docker..." > /dev/console
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker hiveradar
+
+  # Configure Docker daemon for better logging
+  - mkdir -p /etc/docker
+  - |
+    cat > /etc/docker/daemon.json << 'DOCKERCONF'
+    {
+      "log-driver": "json-file",
+      "log-opts": {
+        "max-size": "10m",
+        "max-file": "3"
+      },
+      "default-address-pools": [
+        {
+          "base": "172.20.0.0/16",
+          "size": 24
+        }
+      ]
+    }
+    DOCKERCONF
+  - systemctl restart docker
+
+  #---------------------------------------------------------------------------
+  # Disable swap (recommended for containerized workloads)
+  #---------------------------------------------------------------------------
+  - echo "Disabling swap..." > /dev/console
+  - swapoff -a
+  - sed -i '/ swap / s/^/#/' /etc/fstab
+
+  #---------------------------------------------------------------------------
+  # Configure automatic updates
+  #---------------------------------------------------------------------------
+  - echo "Configuring automatic updates..." > /dev/console
+  - dpkg-reconfigure -plow unattended-upgrades
+  - systemctl enable unattended-upgrades
+  - systemctl start unattended-upgrades
+
+  #---------------------------------------------------------------------------
+  # Enable fail2ban
+  #---------------------------------------------------------------------------
+  - echo "Enabling fail2ban..." > /dev/console
+  - systemctl enable fail2ban
+  - systemctl start fail2ban
+
+  #---------------------------------------------------------------------------
+  # Configure mDNS (Avahi)
+  #---------------------------------------------------------------------------
+  - echo "Configuring mDNS..." > /dev/console
+  - systemctl enable avahi-daemon
+  - systemctl start avahi-daemon
+
+  #---------------------------------------------------------------------------
+  # Disable unnecessary services (saves resources and reduces attack surface)
+  #---------------------------------------------------------------------------
+  - echo "Disabling unnecessary services..." > /dev/console
+  - systemctl disable bluetooth.service 2>/dev/null || true
+  - systemctl stop bluetooth.service 2>/dev/null || true
+  - systemctl disable cups.service 2>/dev/null || true
+  - systemctl disable ModemManager.service 2>/dev/null || true
+
+  #---------------------------------------------------------------------------
+  # Enable hardware sensors
+  #---------------------------------------------------------------------------
+  - echo "Detecting hardware sensors..." > /dev/console
+  - sensors-detect --auto 2>/dev/null || true
+
+  #---------------------------------------------------------------------------
+  # Apply kernel hardening
+  #---------------------------------------------------------------------------
+  - echo "Applying kernel hardening..." > /dev/console
+  - sysctl -p /etc/sysctl.d/99-hiveradar-hardening.conf
+
+  #---------------------------------------------------------------------------
+  # Create HiveRadar directories
+  #---------------------------------------------------------------------------
+  - mkdir -p /opt/hiveradar
+  - mkdir -p /etc/hiveradar
+  - mkdir -p /var/log/hiveradar
+  - chmod 755 /opt/hiveradar /etc/hiveradar
+  - chmod 750 /var/log/hiveradar
+
+  #---------------------------------------------------------------------------
+  # Wait for network to be fully up, then run init script
+  #---------------------------------------------------------------------------
+  - echo "Waiting for network..." > /dev/console
+  - sleep 30  # Give network time to fully initialize
+
+  - echo "Running HiveRadar initialization..." > /dev/console
+  - /usr/local/bin/hiveradar-init.sh 2>&1 | tee /var/log/hiveradar/init.log
+
+  #---------------------------------------------------------------------------
+  # Cleanup
+  #---------------------------------------------------------------------------
+  - echo "Cleaning up..." > /dev/console
+  - apt-get autoremove -y
+  - apt-get autoclean
+  - apt-get clean
+
+  #---------------------------------------------------------------------------
+  # Mark completion
+  #---------------------------------------------------------------------------
+  - echo "Cloud-init complete!" > /dev/console
+  - date > /opt/hiveradar/cloud-init-completed.txt
+
+###############################################################################
+# FINAL ACTIONS
+###############################################################################
+
+# Reboot after provisioning to ensure all changes take effect
+# This is especially important for kernel updates
+power_state:
+  mode: reboot
+  delay: "+2"  # 2 minutes after cloud-init completes
+  message: "Rebooting after initial provisioning..."
+  timeout: 300
+  condition: true
+
+# Phone home (optional - reports successful provisioning)
+# Uncomment and configure if you want cloud-init to report status
+# phone_home:
+#   url: https://config.hiveradar.com/provisioning-status
+#   post:
+#     - instance_id
+#     - hostname
+#     - fqdn
+
+###############################################################################
+# END OF CONFIGURATION
+###############################################################################

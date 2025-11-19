@@ -1,0 +1,290 @@
+# HiveRadar Edge Data Center - Raspberry Pi Configuration
+# Location: /boot/firmware/config.txt
+# Purpose: Hardware configuration for Raspberry Pi devices
+# Last Updated: 2025-11-19
+
+###############################################################################
+# IMPORTANT: This file must be placed at /boot/firmware/config.txt
+# on the SD card BEFORE first boot (or edit on running system and reboot)
+###############################################################################
+
+[all]
+# Include default Raspberry Pi configuration
+include defaults.conf
+
+###############################################################################
+# SECURITY & NETWORKING
+###############################################################################
+
+# Disable WiFi (HiveRadar EDC uses wired Ethernet only)
+dtoverlay=disable-wifi
+
+# Disable Bluetooth (not needed, reduces attack surface)
+dtoverlay=disable-bt
+
+# Disable onboard audio (not needed for edge datacenter use)
+dtparam=audio=off
+
+###############################################################################
+# PERFORMANCE & STABILITY
+###############################################################################
+
+# Enable USB boot (if booting from USB storage instead of SD card)
+# program_usb_boot_mode=1
+
+# Increase GPU memory (default is too high for headless server)
+# Minimum for headless: 16MB
+# Note: Less GPU memory = more RAM for Docker containers
+gpu_mem=16
+
+# Over-voltage for stability (Raspberry Pi 5 and 4)
+# This provides better stability under load
+# Values: 0-8 (0=default, 2=slight boost for stability, DO NOT exceed 6)
+over_voltage=2
+
+# CPU frequency governor (set to performance for consistent speed)
+# This is handled by OS, but we can set boot frequency
+# arm_freq=1800  # Uncomment for Raspberry Pi 4 (default is 1500-1800 depending on model)
+# arm_freq=2400  # Uncomment for Raspberry Pi 5 (default is 2400)
+
+# Disable low-power idle (keeps CPU at full performance)
+# Improves response time for real-time monitoring
+force_turbo=0  # 0 = dynamic scaling, 1 = always max speed (not recommended, runs hot)
+
+###############################################################################
+# USB CONFIGURATION (Critical for UPS-NUT)
+###############################################################################
+
+# Maximum USB current (for Raspberry Pi 4, ignored on Pi 5)
+# Allows USB devices to draw more power if needed
+# 0 = 600mA limit (default)
+# 1 = 1200mA limit
+max_usb_current=1
+
+# USB quirks for specific UPS devices (add if needed)
+# Format: usbhid.quirks=VendorID:ProductID:0x0004
+# Example for EcoFlow UPS: usbhid.quirks=0x3746:0xffff:0x0004
+# The 0x0004 flag means "HID_QUIRK_NOGET" (works around some USB issues)
+#
+# Uncomment and add your UPS vendor/product IDs if USB detection is flaky:
+# cmdline=usbhid.quirks=0x3746:0xffff:0x0004
+
+# USB power management (disable for UPS reliability)
+# This prevents USB ports from powering down
+# Set in /boot/firmware/cmdline.txt instead:
+# usbcore.autosuspend=-1
+
+###############################################################################
+# THERMAL MANAGEMENT
+###############################################################################
+
+# Temperature limits (Raspberry Pi 4 and 5)
+# Default throttle temp: 80°C
+# Default shutdown temp: 85°C
+#
+# You can lower these for better longevity in high-temp environments:
+# temp_limit=75  # Start throttling at 75°C instead of 80°C
+#
+# IMPORTANT: Ensure adequate cooling (heatsink + fan recommended)
+
+###############################################################################
+# BOOT BEHAVIOR
+###############################################################################
+
+# Disable boot delay (faster boot)
+boot_delay=0
+
+# Disable rainbow splash screen
+disable_splash=1
+
+# Enable boot progress display (useful for troubleshooting)
+# 0 = disable, 1 = enable
+# Note: Requires HDMI monitor connected during boot
+enable_uart=1
+
+###############################################################################
+# HDMI CONFIGURATION (Headless mode)
+###############################################################################
+
+# For headless server (no monitor), save power by disabling HDMI
+# Uncomment these lines if no monitor will EVER be connected:
+# hdmi_blanking=2
+# hdmi_ignore_hotplug=1
+
+# Or keep HDMI enabled for troubleshooting (recommended during setup)
+# Leave commented for now, enable later if you want to save power
+
+###############################################################################
+# I2C CONFIGURATION (For UPS communication)
+###############################################################################
+
+# Enable I2C for devices that use it
+# Some UPS units communicate via I2C instead of USB
+dtparam=i2c_arm=on
+
+# I2C baudrate (default is 100000, can increase for faster communication)
+# dtparam=i2c_arm_baudrate=400000
+
+###############################################################################
+# SPI CONFIGURATION
+###############################################################################
+
+# Enable SPI if needed for peripherals
+# dtparam=spi=on
+
+###############################################################################
+# GPIO CONFIGURATION
+###############################################################################
+
+# Configure GPIO pins if needed for external sensors, relays, etc.
+# Example: Set GPIO 17 as output, default low
+# gpio=17=op,dl
+
+###############################################################################
+# CAMERA CONFIGURATION
+###############################################################################
+
+# Camera disabled (not needed for EDC)
+start_x=0
+camera_auto_detect=0
+
+###############################################################################
+# DISPLAY CONFIGURATION
+###############################################################################
+
+# Display auto-detection disabled (headless server)
+display_auto_detect=0
+
+###############################################################################
+# SERIAL CONSOLE
+###############################################################################
+
+# Enable serial console for debugging (optional)
+# Useful if you need to troubleshoot boot issues via serial cable
+# enable_uart=1
+
+# Disable serial console login (security)
+# This is handled by cloud-init, but can be set here too
+# console=serial0,115200
+
+###############################################################################
+# DEVICE TREE OVERLAYS
+###############################################################################
+
+# Load any additional device tree overlays here
+# Example for RTC module:
+# dtoverlay=i2c-rtc,ds3231
+
+# Example for hardware watchdog:
+# dtoverlay=watchdog
+
+###############################################################################
+# RASPBERRY PI 5 SPECIFIC
+###############################################################################
+
+[pi5]
+# Pi 5 specific settings (if needed)
+# These only apply when running on Raspberry Pi 5
+
+# Example: PCIe Gen 3 support (default is Gen 2)
+# dtparam=pciex1_gen=3
+
+###############################################################################
+# RASPBERRY PI 4 SPECIFIC
+###############################################################################
+
+[pi4]
+# Pi 4 specific settings
+
+# Example: Enable 64-bit kernel
+# arm_64bit=1  # This should already be set by Ubuntu image
+
+###############################################################################
+# RASPBERRY PI 3 SPECIFIC
+###############################################################################
+
+[pi3]
+# Pi 3 specific settings
+# No special settings needed for Pi 3B+ at this time
+
+###############################################################################
+# NOTES FOR HIVERADAR DEPLOYMENT
+###############################################################################
+
+# 1. WiFi and Bluetooth are DISABLED for security and stability
+#    - Ethernet is the only supported network interface
+#    - This prevents unauthorized wireless access
+#    - Reduces power consumption and EM interference
+#
+# 2. GPU memory is MINIMIZED (16MB) to maximize RAM for Docker
+#    - Headless server doesn't need GPU resources
+#    - More RAM = more containers and better performance
+#
+# 3. USB is configured for MAXIMUM compatibility with UPS devices
+#    - Higher current limit allows power-hungry UPS units
+#    - USB quirks can be added per-device if needed
+#
+# 4. Boot is optimized for SPEED and reliability
+#    - No unnecessary delays or splash screens
+#    - UART enabled for emergency serial console access
+#
+# 5. Thermal management uses DEFAULT settings
+#    - Ensure adequate cooling (heatsink + fan)
+#    - Monitor temperatures via: vcgencmd measure_temp
+#    - Critical for Raspberry Pi 5 under heavy load
+#
+# 6. HDMI is LEFT ENABLED by default
+#    - Useful during initial setup and troubleshooting
+#    - Can be disabled later to save minimal power
+#
+# 7. I2C is ENABLED for UPS devices that use it
+#    - Some UPS units communicate via I2C
+#    - No harm in leaving enabled even if not used
+#
+# 8. This configuration is TESTED on:
+#    - Raspberry Pi 5 (8GB) - Primary deployment target
+#    - Raspberry Pi 3B+ (1GB) - Legacy/low-cost deployments
+#    - Raspberry Pi 4 (4GB/8GB) - Also compatible
+#
+# 9. DO NOT MODIFY these settings unless you know what you're doing:
+#    - disable-wifi and disable-bt (required for security)
+#    - gpu_mem=16 (critical for maximizing available RAM)
+#    - max_usb_current=1 (needed for UPS reliability)
+
+###############################################################################
+# TROUBLESHOOTING
+###############################################################################
+
+# If you experience issues, try these diagnostic steps:
+#
+# 1. Boot issues:
+#    - Connect HDMI monitor to see boot messages
+#    - Check /boot/firmware/cmdline.txt for errors
+#    - Verify SD card is not corrupted
+#
+# 2. USB UPS not detected:
+#    - Verify max_usb_current=1 is set
+#    - Try different USB port (use USB 3.0 ports if available)
+#    - Check lsusb output: docker exec ups-nut lsusb
+#    - Add USB quirk if specific UPS model has issues
+#
+# 3. Overheating/throttling:
+#    - Check temperature: vcgencmd measure_temp
+#    - Check throttling: vcgencmd get_throttled
+#    - Install heatsink and/or fan
+#    - Reduce over_voltage or set temp_limit lower
+#
+# 4. Network issues:
+#    - Verify Ethernet cable is connected
+#    - WiFi is disabled by design (dtoverlay=disable-wifi)
+#    - Check /var/log/syslog for network errors
+#
+# 5. Slow performance:
+#    - Check if throttling: vcgencmd get_throttled
+#    - Verify adequate power supply (5V 3A minimum for Pi 4/5)
+#    - Check available RAM: free -h
+#    - Reduce number of running containers if needed
+
+###############################################################################
+# END OF CONFIGURATION
+###############################################################################

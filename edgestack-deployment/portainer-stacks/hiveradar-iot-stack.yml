@@ -1,0 +1,297 @@
+version: '3.8'
+
+###############################################################################
+# HiveRadar IoT Edge Stack - CORRECTED VERSION
+###############################################################################
+# Purpose: Complete edge datacenter services for Raspberry Pi
+# Deployment: Via Portainer Edge Agent
+# Last Updated: 2025-11-19
+#
+# IMPORTANT CORRECTIONS from EdgeStack README:
+# - Uses Docker-managed volumes (NOT bind mounts like ./dashboard-data)
+# - All images use :latest tags for easy updates
+# - Simplified configuration for zero-touch deployment via Portainer
+###############################################################################
+
+services:
+  #---------------------------------------------------------------------------
+  # UPS-NUT: Smart USB UPS Monitoring with Hotplug Support
+  #---------------------------------------------------------------------------
+  ups-nut:
+    image: harbor.kostiabytes.ca/hiveradar-iot/ups-nut:latest
+    container_name: ups-nut
+    restart: unless-stopped
+    privileged: true
+    mem_limit: 128m
+    memswap_limit: 128m
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    ports:
+      - "3493:3493"
+    volumes:
+      # Docker-managed volumes (NOT bind mounts)
+      - ups-nut-state:/var/run/nut
+      - ups-nut-logs:/var/log/nut
+      - /run/udev:/run/udev:ro  # For hotplug detection
+    environment:
+      - TZ=${TZ:-UTC}
+      - SCAN_INTERVAL=${UPS_SCAN_INTERVAL:-60}
+      - DEBUG=${UPS_DEBUG:-1}
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD", "/opt/nut/bin/upsc", "-l"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  #---------------------------------------------------------------------------
+  # EDC Dashboard: Web-based monitoring and management interface
+  #---------------------------------------------------------------------------
+  dashboard:
+    image: harbor.kostiabytes.ca/hiveradar-iot/edc-iot-dashboard:latest
+    container_name: edc-iot-dashboard
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - "${DASHBOARD_PORT:-80}:3000"
+    volumes:
+      # CORRECTED: Docker-managed volume (not bind mount!)
+      # This works in Portainer without manual directory creation
+      - dashboard-data:/app/data
+    environment:
+      - TZ=${TZ:-UTC}
+      - NODE_ENV=production
+      # Customer-specific variables (set per device in Portainer)
+      - CUSTOMER_ID=${CUSTOMER_ID:-}
+      - CUSTOMER_NAME=${CUSTOMER_NAME:-}
+      - SERIAL_NUMBER=${SERIAL_NUMBER:-}
+    networks:
+      - iot-network
+    depends_on:
+      - ups-nut
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  #---------------------------------------------------------------------------
+  # StorMagic Witness: SvSAN cluster witness service
+  #---------------------------------------------------------------------------
+  stormagic-witness:
+    image: harbor.kostiabytes.ca/hiveradar-iot/stormagic-witness:latest
+    container_name: stormagic-witness
+    restart: unless-stopped
+    network_mode: host  # Required for multicast discovery
+    privileged: true    # Required for network operations
+    mem_limit: 256m
+    volumes:
+      - stormagic-logs:/app/logs
+      - stormagic-config:/app/config
+    environment:
+      - TZ=${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "stormagic"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  #---------------------------------------------------------------------------
+  # Troubleshooting Sidecar: For remote debugging via Portainer Console
+  #---------------------------------------------------------------------------
+  troubleshoot:
+    image: alpine:latest
+    container_name: troubleshoot
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+    pid: host
+    mem_limit: 64m
+    volumes:
+      - /:/host  # Full host filesystem access
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: tail -f /dev/null
+    # USAGE:
+    # 1. In Portainer: Select this container → Console
+    # 2. Run: chroot /host /bin/bash
+    # 3. Now you have full host access for troubleshooting
+
+  #---------------------------------------------------------------------------
+  # Node Exporter: System metrics for Prometheus (optional)
+  #---------------------------------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    mem_limit: 64m
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    # Uncomment if you want to expose metrics on a specific port
+    # ports:
+    #   - "9100:9100"
+    profiles:
+      - monitoring  # Only deployed if monitoring profile is enabled
+
+  #---------------------------------------------------------------------------
+  # Agilicus Connector: Zero Trust network access (optional)
+  #---------------------------------------------------------------------------
+  agilicus-connector:
+    image: cr.agilicus.com/pub/images/agilicus-agent/client:stable
+    container_name: agilicus-connector
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    mem_limit: 128m
+    volumes:
+      - agilicus-config:/var/lib/agilicus
+    environment:
+      - AGILICUS_CHALLENGE_ID=${AGILICUS_CHALLENGE_ID:-}
+      - AGILICUS_CHALLENGE_CODE=${AGILICUS_CHALLENGE_CODE:-}
+    profiles:
+      - agilicus  # Only deployed if agilicus profile is enabled
+
+###############################################################################
+# VOLUMES - CORRECTED TO USE DOCKER-MANAGED VOLUMES
+###############################################################################
+
+volumes:
+  # UPS-NUT volumes
+  ups-nut-state:
+    driver: local
+  ups-nut-logs:
+    driver: local
+
+  # Dashboard volume - IMPORTANT: Docker-managed, not bind mount!
+  dashboard-data:
+    driver: local
+    # Benefits of Docker-managed volumes:
+    # - Automatic creation (no manual mkdir needed)
+    # - Correct permissions automatically
+    # - Works in Portainer without any manual setup
+    # - Easy backup via Portainer volume browser
+    # - Portable between devices
+
+  # StorMagic volumes
+  stormagic-logs:
+    driver: local
+  stormagic-config:
+    driver: local
+
+  # Agilicus volume (if using Agilicus)
+  agilicus-config:
+    driver: local
+
+###############################################################################
+# NETWORKS
+###############################################################################
+
+networks:
+  iot-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${IOT_NETWORK_SUBNET:-172.20.0.0/16}
+
+###############################################################################
+# DEPLOYMENT NOTES
+###############################################################################
+
+# 1. ENVIRONMENT VARIABLES:
+#    Set these in Portainer Stack → Environment Variables
+#
+#    Required:
+#      TZ = America/New_York (or your timezone)
+#
+#    Optional:
+#      DASHBOARD_PORT = 80 (default)
+#      UPS_SCAN_INTERVAL = 60 (default)
+#      UPS_DEBUG = 1 (default)
+#      IOT_NETWORK_SUBNET = 172.20.0.0/16 (default)
+#
+#    Customer-specific (set per device):
+#      CUSTOMER_ID = ACME-001
+#      CUSTOMER_NAME = ACME Corporation
+#      SERIAL_NUMBER = 4UH20001
+#
+#    For Agilicus (if using):
+#      AGILICUS_CHALLENGE_ID = (from Agilicus portal)
+#      AGILICUS_CHALLENGE_CODE = (from Agilicus portal)
+
+# 2. PROFILES:
+#    To enable optional services, set profiles in Portainer:
+#
+#    Enable monitoring:
+#      Profiles: monitoring
+#
+#    Enable Agilicus:
+#      Profiles: agilicus
+#
+#    Enable both:
+#      Profiles: monitoring,agilicus
+
+# 3. DATA PERSISTENCE:
+#    All volumes are Docker-managed and persist across:
+#    - Container restarts
+#    - Stack updates
+#    - Image updates (when pulling :latest)
+#
+#    To migrate data to a new device:
+#      Option A: Use Portainer volume browser to download/upload
+#      Option B: Use volume backup commands (see documentation)
+
+# 4. STACK UPDATES:
+#    To update to latest images:
+#    - In Portainer: Stacks → Select stack → Update
+#    - Portainer pulls new :latest tags
+#    - Restarts containers with new images
+#    - Data is preserved in volumes
+
+# 5. TROUBLESHOOTING:
+#    Via Portainer Console:
+#    - Select 'troubleshoot' container
+#    - Open Console
+#    - Run: chroot /host /bin/bash
+#    - Now you have full host access
+#
+#    Useful commands:
+#      journalctl -u docker
+#      systemctl status
+#      docker ps
+#      cat /var/log/syslog
+#      uptime
+#      df -h
+#      free -h
+
+# 6. DIFFERENCES FROM EDGESTACK README:
+#    ❌ OLD (bind mounts - doesn't work in Portainer):
+#       volumes:
+#         - ./dashboard-data:/app/data
+#
+#    ✅ NEW (Docker-managed - works perfectly):
+#       volumes:
+#         - dashboard-data:/app/data
+#
+#    ❌ OLD (inconsistent tags):
+#       ups-nut:0.1
+#       dashboard:latest
+#       stormagic:testing-required-arm64
+#
+#    ✅ NEW (consistent :latest for easy updates):
+#       All images use :latest tag
+#       Version tags available for rollback if needed
+
+###############################################################################
+# END OF STACK DEFINITION
+###############################################################################
